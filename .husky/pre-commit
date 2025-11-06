@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "== HUSKY :: pre-commit =="
+pnpm exec lint-staged || exit 1
+
+echo "== HUSKY :: typecheck workspace =="
+pnpm -r --filter ./packages... run typecheck || exit 1
+
+echo "OK :: pre-commit finalizado sem erros."

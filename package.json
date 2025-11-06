@@ -1,0 +1,36 @@
+{
+  "name": "mini-ide",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Mini-IDE monorepo",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.12.2",
+  "scripts": {
+    "build": "pnpm -r --filter ./packages... run build",
+    "typecheck": "pnpm -r --filter ./packages... run typecheck",
+    "lint": "pnpm -r --filter ./packages... run lint",
+    "lint:fix": "pnpm -r --filter ./packages... run lint:fix",
+    "test": "pnpm -r --filter ./packages... run test",
+    "test:watch": "pnpm -r --filter ./packages... run test:watch",
+    "format": "prettier -w .",
+    "format:check": "prettier -c .",
+    "ci:all": "pnpm build && pnpm typecheck && pnpm lint && pnpm test",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.0",
+    "@vitest/coverage-v8": "^4.0.7",
+    "eslint": "^9.39.1",
+    "husky": "9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "vitest": "^4.0.7"
+  }
+}
