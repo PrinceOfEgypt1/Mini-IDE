@@ -9,7 +9,7 @@ type AnalyzeResponse = {
   ok: boolean
   inputLen: NumLike
   outputLen: NumLike
-  result: string | unknown
+  result: string
 }
 
 function isNumLike(v: unknown): v is NumLike {
