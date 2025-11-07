@@ -1,3 +1,7 @@
+PORT=${PORT:-3200}
+BASE="http://127.0.0.1:${PORT}"
+REQUIRE_GLOBAL_CLI=${REQUIRE_GLOBAL_CLI:-0}
+# 42_pipeline_checklist.sh
 # 42_pipeline_checklist.sh
 # =========================================================================================
 # Diretório de execução: ~/workspace/Mini-IDE
@@ -84,7 +88,6 @@ ok "docs geradas: $DOCS_HTML"
 
 # ---------- 7) Smoke do servidor ----------
 # Sobe servidor temporário na porta 3200 e valida endpoints
-PORT=3200
 TMP_LOG="/tmp/mini-ide-server.log"
 SERVER_PID=""
 
