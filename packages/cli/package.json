@@ -2,20 +2,27 @@
   "name": "@mini-ide/cli",
   "version": "0.0.0",
   "private": true,
-  "description": "Ferramentas de linha de comando.",
+  "description": "Mini-IDE CLI (analyze, utilidades locais)",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
-    "@mini-ide/shared": "workspace:*",
-    "@mini-ide/analysis-agent": "workspace:*"
+    "@mini-ide/analysis-agent": "workspace:*",
+    "@mini-ide/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "bin": {
+    "mini-ide": "dist/index.js"
   }
 }

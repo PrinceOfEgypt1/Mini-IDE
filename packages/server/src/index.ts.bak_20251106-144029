@@ -1,0 +1,87 @@
+/**
+ * @module server
+ * @remarks
+ * Servidor Fastify do Mini-IDE.
+ * Exporta {@link buildServer} para uso em testes (in-memory, via `fastify.inject()`),
+ * e mantém o bootstrap CLI quando executado diretamente (tsx/node).
+ */
+import Fastify, { type FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
+import { compactPrompt } from '@mini-ide/analysis-agent';
+import { checkPortFree } from './portGuard';
+
+/**
+ * Cria e configura uma instância do Fastify com rotas e plugins.
+ * @returns {Promise<FastifyInstance>} Instância configurada do Fastify (ainda não "listen").
+ */
+export async function buildServer(): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false });
+
+  // CORS restrito a dev local; ajuste conforme necessidade.
+  await app.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      try {
+        const url = new URL(origin);
+        const ok =
+          (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+          (url.port === '3000' || url.port === '3100' || url.port === '');
+        cb(null, ok);
+      } catch {
+        cb(null, false);
+      }
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    credentials: true,
+  });
+
+  // Healthz
+  app.get('/healthz', async (_req, _reply) => {
+    return {
+      status: 'ok' as const,
+      service: 'mini-ide-server',
+      uptime: process.uptime(),
+    };
+  });
+
+  // Analyze
+  app.post('/analyze', async (req, reply) => {
+    const body = (req.body ?? {}) as { input?: string; maxLen?: number };
+    const input = typeof body.input === 'string' ? body.input : '';
+    const maxLen = typeof body.maxLen === 'number' ? body.maxLen : undefined;
+
+    const result = compactPrompt(input, { maxLen });
+    const payload = {
+      ok: true,
+      inputLen: input.length,
+      outputLen: result.length,
+      result,
+    };
+    return reply.send(payload);
+  });
+
+  return app;
+}
+
+// -----------------------------------------------------------------------------------------
+// CLI bootstrap: roda somente se este arquivo for o entrypoint do processo (não em testes).
+// -----------------------------------------------------------------------------------------
+if (import.meta.url === `file://${process.argv[1]}`) {
+  (async () => {
+    const port = Number(process.env['PORT'] ?? 3000);
+    const host = process.env['HOST'] ?? '127.0.0.1';
+
+    // guarda porto livre se possível (não lança)
+    const free = await checkPortFree(port);
+    if (!free) {
+      console.warn(`[mini-ide] aviso: porta ${port} ocupada; tente outra via PORT=xxxx`);
+    }
+
+    const app = await buildServer();
+    await app.listen({ port, host });
+    console.log(`[mini-ide] server running on http://${host}:${port}`);
+  })().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

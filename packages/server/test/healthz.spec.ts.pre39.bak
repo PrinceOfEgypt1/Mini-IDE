@@ -1,0 +1,31 @@
+/**
+ * Testes do endpoint /healthz com tipagem segura.
+ * Evita uso de `any` para satisfazer eslint (@typescript-eslint/*).
+ */
+import { describe, it, expect } from 'vitest';
+
+type HealthzResponse = {
+  status: 'ok';
+  service: string;
+  uptime: number;
+};
+
+const BASE =
+  process.env['TEST_BASE_URL'] ??
+  process.env['BASE_URL'] ??
+  'http://localhost:3000';
+
+describe('server :: /healthz', () => {
+  it('retorna status ok, service e uptime numérico', async () => {
+    const res = await fetch(`${BASE}/healthz`, { method: 'GET' });
+    expect(res.ok).toBe(true);
+
+    const bodyUnknown = await res.json();
+    // Converte de unknown → HealthzResponse (sem permitir any nas asserções)
+    const body = bodyUnknown as HealthzResponse;
+
+    expect(body.status).toBe('ok');
+    expect(typeof body.service).toBe('string');
+    expect(typeof body.uptime).toBe('number');
+  });
+});

@@ -8,16 +8,19 @@
   },
   "packageManager": "pnpm@9.12.2",
   "scripts": {
-    "build": "pnpm -r --filter ./packages... run build",
-    "typecheck": "pnpm -r --filter ./packages... run typecheck",
-    "lint": "pnpm -r --filter ./packages... run lint",
-    "lint:fix": "pnpm -r --filter ./packages... run lint:fix",
-    "test": "pnpm -r --filter ./packages... run test",
-    "test:watch": "pnpm -r --filter ./packages... run test:watch",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "test": "pnpm -r run test",
+    "test:watch": "pnpm -r run test:watch",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "ci:all": "pnpm build && pnpm typecheck && pnpm lint && pnpm test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:all": "pnpm -F @mini-ide/server run dev",
+    "docs": "typedoc",
+    "docs:serve": "python3 -m http.server 8080 -d docs/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -29,8 +32,10 @@
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
+    "typedoc": "^0.28.14",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3",
     "vitest": "^4.0.7"
-  }
+  },
+  "type": "module"
 }
