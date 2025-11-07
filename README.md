@@ -11,3 +11,7 @@ node packages/cli/dist/index.js analyze --base "http://127.0.0.1:3200" --input "
 - `46_safe_tag_and_push.sh` — cria tag e publica (release).
 > Todos os demais scripts foram arquivados em `scripts/`. Evite executá-los.
 
+
+### Porta padrão
+- O servidor roda em **http://127.0.0.1:3200** (padronizado).
+- O CLI deve usar `--url http://127.0.0.1:3200`.
