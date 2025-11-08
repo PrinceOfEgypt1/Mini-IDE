@@ -201,7 +201,7 @@ else
   fi
 fi
 # ---------- 9) Resumo ----------
-COUNT_RESUMO="$(grep -cF '# ---------- 9) Resumo ----------' '42_pipeline_checklist.sh' || echo 0)"; if [ "${COUNT_RESUMO:-0}" -gt 1 ]; then echo "[erro] Bloco 9) Resumo duplicado em 42_pipeline_checklist.sh" >&2; exit 1; fi
+COUNT_RESUMO="$(grep -xF -c '# ---------- 9) Resumo ----------' '42_pipeline_checklist.sh' || echo 0)"; if [ "${COUNT_RESUMO:-0}" -gt 1 ]; then echo "[erro] Bloco 9) Resumo duplicado em 42_pipeline_checklist.sh" >&2; exit 1; fi
 echo "----------------------------------------"
 echo "CHECKLIST GERAL: SUCESSO ✅"
 echo "Server base: http://127.0.0.1:$PORT"
