@@ -204,6 +204,7 @@ else
   fi
 fi
 # ---------- 9) Resumo ----------
+COUNT_RESUMO="$(grep -cF '# ---------- 9) Resumo ----------' '42_pipeline_checklist.sh' || echo 0)"; if [ "${COUNT_RESUMO:-0}" -gt 1 ]; then
 echo "----------------------------------------"
 echo "CHECKLIST GERAL: SUCESSO ✅"
 echo "Server base: http://127.0.0.1:$PORT"
