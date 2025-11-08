@@ -21,3 +21,5 @@ coverage/
 /bundles/**/*.json
 
 /bundles/**/*.json
+/42_pipeline_checklist.sh.bak.*
+/42_pipeline_checklist.sh.tmp.*
