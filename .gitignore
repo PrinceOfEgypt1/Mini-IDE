@@ -15,3 +15,7 @@ coverage/
 # Env
 .env
 .env.*
+
+# artefatos gerados
+/docs/api/
+/bundles/**.json
