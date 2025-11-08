@@ -1,85 +1,200 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import Fastify, { type FastifyInstance } from 'fastify'
-import cors from '@fastify/cors'
-import { registerRoutes } from '../src/index'
+import { describe, it, expect } from "vitest";
+import type { FastifyInstance } from "fastify";
+import {
+  buildServer,
+  shutdown,
+  inject,
+  status,
+  jsonUnknown,
+} from "./test-utils.js";
 
-type NumLike = number | string
-
-type AnalyzeResponse = {
-  ok: boolean
-  inputLen: NumLike
-  outputLen: NumLike
-  result: string
+/**
+ * Shape esperado da resposta /analyze
+ */
+interface AnalyzeBody {
+  summary: string;
+  tokensUsed: number;
+  runId: string;
+  ts: string;
 }
 
-function isNumLike(v: unknown): v is NumLike {
-  return typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v)))
+/**
+ * Type guard com validação em runtime
+ */
+function assertAnalyzeBody(u: unknown): asserts u is AnalyzeBody {
+  if (typeof u !== "object" || u === null) {
+    throw new Error("body não é objeto");
+  }
+  const o = u as Record<string, unknown>;
+  if (typeof o["summary"] !== "string") {
+    throw new Error("summary inválido");
+  }
+  if (typeof o["tokensUsed"] !== "number") {
+    throw new Error("tokensUsed inválido");
+  }
+  if (typeof o["runId"] !== "string") {
+    throw new Error("runId inválido");
+  }
+  if (typeof o["ts"] !== "string") {
+    throw new Error("ts inválido");
+  }
 }
 
-function isAnalyzeResponse(x: unknown): x is AnalyzeResponse {
-  if (!x || typeof x !== 'object') return false
-  const o = x as Record<string, unknown>
-  return (
-    typeof o['ok'] === 'boolean' &&
-    isNumLike(o['inputLen']) &&
-    isNumLike(o['outputLen']) &&
-    Object.prototype.hasOwnProperty.call(o, 'result')
-  )
-}
+describe("POST /analyze - Happy Path (200)", () => {
+  it("AC1: should return 200 with valid text and maxLen", async () => {
+    const app: FastifyInstance = await buildServer();
 
-function coerceLen(v: NumLike): number {
-  return typeof v === 'number' ? v : Number(v)
-}
+    try {
+      const res = await inject(app, {
+        method: "POST",
+        url: "/analyze",
+        payload: {
+          text: "Olá Mini-IDE!",
+          maxLen: 10,
+        },
+      });
 
-describe('server :: /analyze', () => {
-  let app: FastifyInstance
+      expect(status(res)).toBe(200);
 
-  beforeAll(async () => {
-    app = Fastify({ logger: false })
-    await app.register(cors, { origin: true })
-    registerRoutes(app)
-    await app.ready()
-  })
+      const bodyUnknown = jsonUnknown(res);
+      assertAnalyzeBody(bodyUnknown);
 
-  afterAll(async () => {
-    await app.close()
-  })
-
-  it('compacta o texto e retorna ok=true', async () => {
-    const payload = { input: '  Olá Mini-IDE!  \r\n\r\n   Demo de  compactação   ' }
-    const res = await app.inject({ method: 'POST', url: '/analyze', payload })
-    expect(res.statusCode).toBe(200)
-
-    const raw: unknown = res.json()
-    if (!isAnalyzeResponse(raw)) {
-      console.error('DEBUG /analyze body:', raw)
-      throw new Error('Invalid AnalyzeResponse')
+      // Usar ['key'] para evitar TS4111
+      expect(bodyUnknown["summary"].length).toBeLessThanOrEqual(10);
+      expect(bodyUnknown["summary"]).toBe("Olá Mini-I");
+      expect(bodyUnknown["tokensUsed"]).toBe(2);
+      expect(bodyUnknown["ts"]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      expect(bodyUnknown["runId"]).toMatch(/^run-[0-9a-f-]{36}$/);
+    } finally {
+      await shutdown(app);
     }
+  });
 
-    const outStr = String(raw.result)
-    const inLen = coerceLen(raw.inputLen)
-    const outLen = coerceLen(raw.outputLen)
+  it("AC2: should use default maxLen (100) when omitted", async () => {
+    const app: FastifyInstance = await buildServer();
 
-    expect(raw.ok).toBe(true)
-    expect(inLen).toBeGreaterThan(0)
-    expect(outLen).toBeGreaterThan(0)
-    expect(outStr.length).toBeGreaterThan(0)
-  })
+    try {
+      const longText = "a".repeat(150);
 
-  it('respeita o limite maxLen (quando fornecido)', async () => {
-    const payload = { input: '  Olá Mini-IDE!  \r\n\r\n   Demo de  compactação   ', maxLen: 10 }
-    const res = await app.inject({ method: 'POST', url: '/analyze', payload })
-    expect(res.statusCode).toBe(200)
+      const res = await inject(app, {
+        method: "POST",
+        url: "/analyze",
+        payload: {
+          text: longText,
+        },
+      });
 
-    const raw: unknown = res.json()
-    if (!isAnalyzeResponse(raw)) {
-      console.error('DEBUG /analyze body:', raw)
-      throw new Error('Invalid AnalyzeResponse')
+      expect(status(res)).toBe(200);
+
+      const bodyUnknown = jsonUnknown(res);
+      assertAnalyzeBody(bodyUnknown);
+
+      expect(bodyUnknown["summary"].length).toBe(100);
+      expect(bodyUnknown["tokensUsed"]).toBe(1);
+    } finally {
+      await shutdown(app);
     }
+  });
 
-    const outStr = String(raw.result)
-    const outLen = coerceLen(raw.outputLen)
-    expect(outStr.length).toBeLessThanOrEqual(10)
-    expect(outLen).toBeLessThanOrEqual(10)
-  })
-})
+  it("AC3: should include all required fields in response", async () => {
+    const app: FastifyInstance = await buildServer();
+
+    try {
+      const res = await inject(app, {
+        method: "POST",
+        url: "/analyze",
+        payload: {
+          text: "Texto de teste",
+          maxLen: 50,
+        },
+      });
+
+      expect(status(res)).toBe(200);
+
+      const bodyUnknown = jsonUnknown(res);
+      assertAnalyzeBody(bodyUnknown);
+
+      expect(bodyUnknown["summary"]).toBeTruthy();
+      expect(bodyUnknown["tokensUsed"]).toBeGreaterThan(0);
+      expect(bodyUnknown["runId"]).toBeTruthy();
+      expect(bodyUnknown["ts"]).toBeTruthy();
+    } finally {
+      await shutdown(app);
+    }
+  });
+
+  it("should handle text with multiple tokens correctly", async () => {
+    const app: FastifyInstance = await buildServer();
+
+    try {
+      const res = await inject(app, {
+        method: "POST",
+        url: "/analyze",
+        payload: {
+          text: "Um dois três quatro cinco",
+          maxLen: 100,
+        },
+      });
+
+      expect(status(res)).toBe(200);
+
+      const bodyUnknown = jsonUnknown(res);
+      assertAnalyzeBody(bodyUnknown);
+
+      expect(bodyUnknown["tokensUsed"]).toBe(5);
+    } finally {
+      await shutdown(app);
+    }
+  });
+
+  it("should handle maxLen at minimum boundary (1)", async () => {
+    const app: FastifyInstance = await buildServer();
+
+    try {
+      const res = await inject(app, {
+        method: "POST",
+        url: "/analyze",
+        payload: {
+          text: "Teste",
+          maxLen: 1,
+        },
+      });
+
+      expect(status(res)).toBe(200);
+
+      const bodyUnknown = jsonUnknown(res);
+      assertAnalyzeBody(bodyUnknown);
+
+      expect(bodyUnknown["summary"]).toBe("T");
+      expect(bodyUnknown["summary"].length).toBe(1);
+    } finally {
+      await shutdown(app);
+    }
+  });
+
+  it("should handle maxLen at maximum boundary (1000)", async () => {
+    const app: FastifyInstance = await buildServer();
+
+    try {
+      const longText = "x".repeat(2000);
+
+      const res = await inject(app, {
+        method: "POST",
+        url: "/analyze",
+        payload: {
+          text: longText,
+          maxLen: 1000,
+        },
+      });
+
+      expect(status(res)).toBe(200);
+
+      const bodyUnknown = jsonUnknown(res);
+      assertAnalyzeBody(bodyUnknown);
+
+      expect(bodyUnknown["summary"].length).toBe(1000);
+    } finally {
+      await shutdown(app);
+    }
+  });
+});

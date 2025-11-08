@@ -1,88 +1,158 @@
-/**
- * Mini-IDE :: Server (Fastify)
- *
- * @remarks
- * Este módulo expõe a função {@link registerRoutes} (usada pelos testes)
- * e, fora de ambiente de testes, realiza o boot do servidor HTTP.
- */
-
-import Fastify, { type FastifyInstance } from 'fastify';
-import cors from '@fastify/cors';
-import { compactPrompt } from '@mini-ide/analysis-agent';
-import { checkPortFree } from './portGuard';
+import Fastify, { type FastifyRequest, type FastifyReply, type FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
 
 /**
- * Registra as rotas públicas do servidor no app fornecido.
- *
- * @param app - Instância Fastify onde as rotas serão registradas.
+ * Configuração padrão do servidor Mini-IDE
  */
-export function registerRoutes(app: FastifyInstance): void {
-  // GET /healthz
-  app.get('/healthz', () => {
-    return {
-      status: 'ok' as const,
-      service: 'mini-ide-server',
-      uptime: process.uptime(),
-    };
-  });
+const DEFAULT_PORT = 3200;
+const DEFAULT_MAX_LEN = 100;
+const MAX_LEN_LIMIT = 1000;
+const MIN_MAX_LEN = 1;
 
-  // POST /analyze
-  app.post('/analyze', (request) => {
-    // Tipos de entrada e saída simples para segurança mínima
-    type AnalyzeBody = { input?: string; maxLen?: number };
-    type AnalyzeResponse = { ok: true; inputLen: number; outputLen: number; result: string } |
-                           { ok: false; error: string };
-
-    const body = (request.body ?? {}) as AnalyzeBody;
-    const input = typeof body.input === 'string' ? body.input : '';
-    const maxLen = typeof body.maxLen === 'number' && Number.isFinite(body.maxLen) && body.maxLen > 0
-      ? Math.floor(body.maxLen)
-      : undefined;
-
-    if (!input) {
-      const resp: AnalyzeResponse = { ok: false, error: 'input vazio' };
-      return resp;
-    }
-
-    const result = compactPrompt(input, maxLen ? { maxLen } : undefined);
-    const resp: AnalyzeResponse = {
-      ok: true,
-      inputLen: input.length,
-      outputLen: result.length,
-      result,
-    };
-    return resp;
-  });
+/**
+ * Interface de resposta do endpoint /analyze
+ * @property summary - Texto resumido até maxLen caracteres
+ * @property tokensUsed - Estimativa de tokens (split por espaço)
+ * @property runId - ID de correlação da requisição
+ * @property ts - Timestamp ISO-8601 UTC
+ */
+export interface AnalyzeResponse {
+  summary: string;
+  tokensUsed: number;
+  runId: string;
+  ts: string;
 }
 
 /**
- * Executa o servidor HTTP quando não estiver em ambiente de testes.
- * - Respeita PORT do ambiente (com acesso por index signature)
- * - Garante porta livre antes de iniciar
- * - Registra CORS (origin: true) para desenvolvimento
+ * Interface de requisição do endpoint /analyze
  */
-async function boot(): Promise<void> {
-  const portEnv = process.env['PORT'];
-  const port = Number(portEnv ?? 3000);
+export interface AnalyzeRequest {
+  text: string;
+  maxLen?: number;
+}
 
-  const app = Fastify({ logger: false });
-  await app.register(cors, { origin: true });
+/**
+ * Processa texto e retorna resumo com metadados
+ * @param text - Texto a ser analisado
+ * @param maxLen - Comprimento máximo do resumo (default: 100)
+ * @returns Objeto AnalyzeResponse com summary, tokensUsed, runId e ts
+ */
+function processAnalyze(text: string, maxLen: number): AnalyzeResponse {
+  const runId = `run-${randomUUID()}`;
+  const ts = new Date().toISOString();
+
+  // Aplica maxLen ao texto (trunca se necessário)
+  const summary = text.slice(0, maxLen);
+
+  // Estimativa determinística de tokens (split por espaço)
+  const tokensUsed = text.trim().split(/\s+/).length;
+
+  // Log de observabilidade (JSON estruturado)
+  console.log(
+    JSON.stringify({
+      event: "analyze.200",
+      runId,
+      ts,
+      textLen: text.length,
+      maxLen,
+      summaryLen: summary.length,
+      tokensUsed,
+    })
+  );
+
+  return { summary, tokensUsed, runId, ts };
+}
+
+/**
+ * Registra rotas do servidor Mini-IDE
+ * @param app - Instância do Fastify
+ */
+export function registerRoutes(app: FastifyInstance): FastifyInstance {
+  /**
+   * GET /healthz - Health check do servidor
+   */
+  app.get("/healthz", () => {
+    return { status: "ok", timestamp: new Date().toISOString() };
+  });
+
+  /**
+   * POST /analyze - Endpoint de análise de texto
+   * Aceita { text: string, maxLen?: number }
+   * Retorna { summary, tokensUsed, runId, ts }
+   */
+  app.post(
+    "/analyze",
+    (
+      request: FastifyRequest<{ Body: AnalyzeRequest }>,
+      reply: FastifyReply
+    ) => {
+      const { text, maxLen } = request.body;
+
+      // Validação básica: text deve ser string não-vazia
+      if (typeof text !== "string") {
+        return reply.code(400).send({
+          error: "Invalid request",
+          message: "Field 'text' must be a string",
+        });
+      }
+
+      // Aplica default de maxLen se não fornecido
+      const effectiveMaxLen = maxLen ?? DEFAULT_MAX_LEN;
+
+      // Validação de range de maxLen
+      if (effectiveMaxLen < MIN_MAX_LEN || effectiveMaxLen > MAX_LEN_LIMIT) {
+        return reply.code(400).send({
+          error: "Invalid maxLen",
+          message: `maxLen must be between ${MIN_MAX_LEN} and ${MAX_LEN_LIMIT}`,
+        });
+      }
+
+      // Processa análise e retorna 200
+      const result = processAnalyze(text, effectiveMaxLen);
+      return reply.code(200).send(result);
+    }
+  );
+
+  return app;
+}
+
+/**
+ * Inicializa e inicia o servidor Mini-IDE
+ */
+async function main(): Promise<void> {
+  const port = parseInt(process.env["PORT"] || String(DEFAULT_PORT), 10);
+
+  const app = Fastify({
+    logger: false,
+  });
 
   registerRoutes(app);
 
-  const free = await checkPortFree(port);
-  if (!free) {
-    throw new Error(`Porta ${port} indisponível`);
+  try {
+    await app.listen({ port, host: "127.0.0.1" });
+    console.log(
+      JSON.stringify({
+        event: "server.started",
+        port,
+        ts: new Date().toISOString(),
+      })
+    );
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        event: "server.error",
+        error: String(err),
+        ts: new Date().toISOString(),
+      })
+    );
+    process.exit(1);
   }
-
-  await app.listen({ host: '0.0.0.0', port });
-  console.log(`[mini-ide] server running on http://localhost:${port}`);
 }
 
-// Somente faz boot quando não for ambiente de testes (Vitest)
-if (!process.env['VITEST']) {
-  boot().catch((err) => {
-    console.error('[mini-ide] boot error:', err);
+// Executa apenas se for o módulo principal
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error("Fatal error:", err);
     process.exit(1);
   });
 }
