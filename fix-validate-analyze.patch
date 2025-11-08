@@ -1,0 +1,42 @@
+diff --git a/42_pipeline_checklist.sh b/42_pipeline_checklist.sh
+index 1111111..2222222 100755
+--- a/42_pipeline_checklist.sh
++++ b/42_pipeline_checklist.sh
+@@ -1,3 +1,4 @@
++# (trechos omitidos acima permanecem inalterados)
+ ...
+-# -- validar /analyze --
+-log "-- validar /analyze --"
+-ANALYZE_REQ='{"input":"  Olá   Mini-IDE!  \r\n\r\n Demo de   compactação ","maxLen":60}'
+-ANALYZE_RES="$(curl -sf -H 'content-type: application/json' -d "$ANALYZE_REQ" "http://127.0.0.1:$PORT/analyze")"
+-ANALYZE_OK="$(echo "$ANALYZE_RES" | jq -r '.ok')" || true
+-[ "$ANALYZE_OK" = "true" ] || { err "/analyze retornou erro: $ANALYZE_RES"; exit 1; }
+-ok "/analyze válido"
++# -- validar /analyze --
++log "-- validar /analyze --"
++# payload conforme contrato happy path da HU-Server-Analyze-200
++ANALYZE_REQ='{"text":"  Olá   Mini-IDE!  \r\n\r\n Demo de   compactação ","maxLen":60}'
++
++# chamada HTTP; se falhar (timeout/4xx/5xx), acusa erro
++ANALYZE_RES="$(curl -sf -H 'content-type: application/json' \
++  -d "$ANALYZE_REQ" "http://127.0.0.1:$PORT/analyze")" || {
++  err "falha HTTP ao chamar /analyze"; exit 1;
++}
++
++# valida contrato do caminho feliz: summary, tokensUsed(number), runId(string), ts(ISO-8601)
++echo "$ANALYZE_RES" | jq -e '
++  .summary and
++  (.tokensUsed | type == "number") and
++  (.runId | type == "string" and length > 0) and
++  (.ts   | type == "string"  and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T"))
++' > /dev/null || { err "/analyze payload inesperado: $ANALYZE_RES"; exit 1; }
++
++ok "/analyze válido"
+ ...
+ # ---------- 8) CLI (local e global) ----------
+ # 8.1) CLI local (dist)
+@@ -30,3 +31,4 @@ ok "CLI local OK: $CLI_SAVED"
+   ok "CLI global OK: $CLI_G_SAVED"
+ fi
+ ...
++# (trechos abaixo permanecem inalterados)

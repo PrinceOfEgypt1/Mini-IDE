@@ -1,53 +1,57 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import Fastify, { type FastifyInstance } from 'fastify'
-import cors from '@fastify/cors'
-import { registerRoutes } from '../src/index'
+import { describe, it, expect } from "vitest";
+import type { FastifyInstance } from "fastify";
+import {
+  buildServer,
+  shutdown,
+  inject,
+  status,
+  jsonUnknown,
+} from "./test-utils.js";
 
-type HealthzResponse = {
-  status: 'ok'
-  service: string
-  uptime: number
+/**
+ * Shape esperado da resposta /healthz
+ */
+interface HealthzBody {
+  status: string;
+  timestamp: string;
 }
 
-function isHealthzResponse(x: unknown): x is HealthzResponse {
-  if (!x || typeof x !== 'object') return false
-  const o = x as Record<string, unknown>
-  return (
-    o['status'] === 'ok' &&
-    typeof o['service'] === 'string' &&
-    typeof o['uptime'] === 'number'
-  )
-}
-
-function assertHealthzResponse(x: unknown): asserts x is HealthzResponse {
-  if (!isHealthzResponse(x)) {
-    throw new Error('Invalid HealthzResponse')
+/**
+ * Type guard com validação em runtime
+ */
+function assertHealthzBody(u: unknown): asserts u is HealthzBody {
+  if (typeof u !== "object" || u === null) {
+    throw new Error("body não é objeto");
+  }
+  const o = u as Record<string, unknown>;
+  if (typeof o["status"] !== "string") {
+    throw new Error("status inválido");
+  }
+  if (typeof o["timestamp"] !== "string") {
+    throw new Error("timestamp inválido");
   }
 }
 
-describe('server :: /healthz', () => {
-  let app: FastifyInstance
+describe("server :: /healthz", () => {
+  it("retorna status ok e timestamp ISO-8601", async () => {
+    const app: FastifyInstance = await buildServer();
 
-  beforeAll(async () => {
-    app = Fastify({ logger: false })
-    await app.register(cors, { origin: true })
-    registerRoutes(app)
-    await app.ready()
-  })
+    try {
+      const res = await inject(app, "/healthz");
+      expect(status(res)).toBe(200);
 
-  afterAll(async () => {
-    await app.close()
-  })
+      const bodyUnknown = jsonUnknown(res);
+      assertHealthzBody(bodyUnknown);
 
-  it('retorna status ok, service e uptime numérico', async () => {
-    const res = await app.inject({ method: 'GET', url: '/healthz' })
-    expect(res.statusCode).toBe(200)
+      // Usar ['key'] para evitar TS4111
+      expect(bodyUnknown["status"]).toBe("ok");
+      expect(bodyUnknown["timestamp"]).toBeTruthy();
 
-    const obj: unknown = res.json()
-    assertHealthzResponse(obj)
-
-    expect(obj.status).toBe('ok')
-    expect(typeof obj.service).toBe('string')
-    expect(typeof obj.uptime).toBe('number')
-  })
-})
+      // Valida formato ISO-8601
+      expect(() => new Date(bodyUnknown["timestamp"])).not.toThrow();
+      expect(bodyUnknown["timestamp"]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    } finally {
+      await shutdown(app);
+    }
+  });
+});
