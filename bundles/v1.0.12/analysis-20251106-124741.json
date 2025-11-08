@@ -1,0 +1,13 @@
+{
+  "args": {
+    "input": "  Olá   Mini-IDE!  \\r\\n\\r\\n Demo de   compactação ",
+    "maxLen": 60,
+    "url": "http://localhost:3100"
+  },
+  "response": {
+    "ok": true,
+    "inputLen": 50,
+    "outputLen": 42,
+    "result": "Olá Mini-IDE! \\r\\n\\r\\n Demo de compactação"
+  }
+}
