@@ -22,3 +22,7 @@ coverage/
 /bundles/
 *.bak
 *.bak.*
+51
+*_bak*
+packages-bak/
+**/*.pre*.bak
