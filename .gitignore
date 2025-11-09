@@ -19,3 +19,6 @@ coverage/
 # artefatos gerados
 /docs/api/
 /bundles/**.json
+/bundles/
+*.bak
+*.bak.*
