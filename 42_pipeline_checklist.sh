@@ -1,4 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# debug temporário
+#set -x
 PORT=${PORT:-3200}
+set -euo pipefail
 BASE="http://127.0.0.1:${PORT}"
 REQUIRE_GLOBAL_CLI=${REQUIRE_GLOBAL_CLI:-0}
 # 42_pipeline_checklist.sh
@@ -25,7 +30,7 @@ REQUIRE_GLOBAL_CLI=${REQUIRE_GLOBAL_CLI:-0}
 set -euo pipefail
 
 # __GUARDA_RESUMO__ (não remover): evita duplicação do bloco 9) Resumo
-if [ "$(grep -c "^# ---------- 9\) Resumo ----------$" "42_pipeline_checklist.sh")" -gt 1 ]; then
+if [ "$(grep -Fxc "# ---------- 9) Resumo ----------" 42_pipeline_checklist.sh)" -gt 1 ]; then
   echo "[erro] Bloco 9) Resumo duplicado em 42_pipeline_checklist.sh" >&2; exit 1
 fi
 
@@ -212,3 +217,7 @@ echo "CLI local:   $CLI_SAVED"
 [ -n "${CLI_G_SAVED:-}" ] && echo "CLI global:  $CLI_G_SAVED"
 echo "----------------------------------------"
 
+
+# == helpers ==
+is_uint() { [[ "${1:-}" =~ ^[0-9]+$ ]]; }
+# uso: if is_uint "$PORT" && (( PORT > 0 )); then ...

@@ -8,14 +8,20 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
-
 # Builds
 *.tsbuildinfo
-
 # Env
 .env
 .env.*
-
 # artefatos gerados
 /docs/api/
 /bundles/**.json
+/bundles/
+*.bak
+*.bak.*
+51
+*_bak*
+packages-bak/
+**/*.pre*.bak
+# Backups locais — manter fora do Git
+scripts/archive-*/
