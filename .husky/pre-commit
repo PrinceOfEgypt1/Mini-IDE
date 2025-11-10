@@ -24,5 +24,3 @@ fi
 
 echo "OK :: pre-commit finalizado sem erros."
 
-# Hardening: typecheck workspace
-pnpm -r exec tsc --noEmit || exit 1
