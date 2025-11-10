@@ -5,6 +5,14 @@ pnpm exec lint-staged || exit 1
 
 echo "== HUSKY :: typecheck workspace =="
 # Typecheck com filtro quando houver paths; fallback para workspace inteiro
+PKG_FILT="$(git diff --cached --name-only | awk -F/ '$1=="packages" && NF>=2 {print $1"/"$2}' | sort -u | paste -sd, -)"
+if [ -n "$PKG_FILT" ]; then
+  echo "[pre-commit] Typecheck filtrado (workspaces): $PKG_FILT"
+  pnpm -r --filter "$PKG_FILT" exec tsc --noEmit || exit 1
+else
+  echo "[pre-commit] Typecheck workspace inteiro (fallback)"
+  pnpm -r exec tsc --noEmit || exit 1
+fi
 FILT="$(git diff --cached --name-only | xargs -r -n1 dirname | sort -u | paste -sd, -)"
 if [ -n "$FILT" ]; then
   echo "[pre-commit] Typecheck filtrado: $FILT"
