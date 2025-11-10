@@ -7,3 +7,6 @@ echo "== HUSKY :: typecheck workspace =="
 pnpm -r --filter ./packages... run typecheck || exit 1
 
 echo "OK :: pre-commit finalizado sem erros."
+
+# Hardening: typecheck workspace
+pnpm -r exec tsc --noEmit || exit 1

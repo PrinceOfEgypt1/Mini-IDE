@@ -21,7 +21,8 @@
     "dev:all": "pnpm -F @mini-ide/server run dev",
     "docs": "typedoc",
     "docs:serve": "python3 -m http.server 8080 -d docs/api",
-    "dev:server": "PORT=3200 node packages/server/dist/index.js"
+    "dev:server": "PORT=3200 node packages/server/dist/index.js",
+    "docs:generate": "bash scripts/generate_docs_stub.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

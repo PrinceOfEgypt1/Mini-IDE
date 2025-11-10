@@ -25,3 +25,9 @@ packages-bak/
 **/*.pre*.bak
 # Backups locais — manter fora do Git
 scripts/archive-*/
+*.tmp
+*.backup_*
+.backup-fixes/
+packages/**/index.ts.tmp
+packages/**/index.ts.backup_*
+packages/**/test-utils.ts.tmp
