@@ -4,7 +4,15 @@ echo "== HUSKY :: pre-commit =="
 pnpm exec lint-staged || exit 1
 
 echo "== HUSKY :: typecheck workspace =="
-pnpm -r --filter ./packages... run typecheck || exit 1
+# Typecheck com filtro quando houver paths; fallback para workspace inteiro
+FILT="$(git diff --cached --name-only | xargs -r -n1 dirname | sort -u | paste -sd, -)"
+if [ -n "$FILT" ]; then
+  echo "[pre-commit] Typecheck filtrado: $FILT"
+  pnpm -r --filter "$FILT" exec tsc --noEmit || exit 1
+else
+  echo "[pre-commit] Typecheck workspace inteiro (fallback)"
+  pnpm -r exec tsc --noEmit || exit 1
+fi
 
 echo "OK :: pre-commit finalizado sem erros."
 
