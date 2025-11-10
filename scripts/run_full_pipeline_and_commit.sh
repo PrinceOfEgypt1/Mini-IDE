@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+[[ "${BASH_SOURCE[0]}" != "$0" ]] && { echo "[erro] não faça source: execute ./scripts/run_full_pipeline_and_commit.sh"; return 1 2>/dev/null || exit 1; }
 set -euo pipefail
 
 # ==============================================================================

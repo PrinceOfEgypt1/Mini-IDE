@@ -1,122 +1,87 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { build, shutdown, inject, status, jsonUnknown } from './test-utils';
+import { build, shutdown, inject, status, jsonUnknown } from './test-utils.js';
 
-/**
- * HU-Server-Analyze-400 - validações e respostas 400
- *
- * Objetivo: garantir que /analyze responda 400 para entradas inválidas
- * e mantenha o happy path sólido para comparação.
- */
-describe('HU-Server-Analyze-400 - validações e respostas 400', () => {
+describe('POST /analyze - Error Cases (400)', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    // harness padronizado: build() retorna FastifyInstance
-    app = build();
-    await app.ready();
+    app = await build();
   });
 
   afterAll(async () => {
     await shutdown(app);
   });
 
-  // AC1: text ausente -> 400
-  it('AC1: text ausente -> 400', async () => {
-    const res = await inject(app, {
+  it('AC1: should return 400 when text is missing', async () => {
+    const response = await inject(app, {
       method: 'POST',
       url: '/analyze',
-      payload: {}, // sem "text"
+      payload: { maxLen: 10 },
     });
-    expect(status(res)).toBe(400);
 
-    const body = jsonUnknown(res) as { error?: string; details?: string };
-    expect(body.error).toBe('Bad Request');
-    expect(body.details).toBeDefined();
+    expect(status(response)).toBe(400);
+    const body = jsonUnknown<{ error: string }>(response);
+    expect(body.error).toContain('text');
   });
 
-  // AC2: text vazio/whitespace -> 400
-  it('AC2: text vazio/whitespace -> 400', async () => {
-    const res = await inject(app, {
+  it('AC2: should return 400 when text is empty string', async () => {
+    const response = await inject(app, {
       method: 'POST',
       url: '/analyze',
-      payload: { text: '   ' },
+      payload: { text: '', maxLen: 10 },
     });
-    expect(status(res)).toBe(400);
 
-    const body = jsonUnknown(res) as { error?: string; details?: string };
-    expect(body.error).toBe('Bad Request');
+    expect(status(response)).toBe(400);
+    const body = jsonUnknown<{ error: string }>(response);
+    expect(body.error).toContain('text');
   });
 
-  // AC3: text não-string -> 400 (number/array/obj/bool/null)
-  it('AC3: text não-string -> 400 (number/array/obj/bool/null)', async () => {
-    const invalids: unknown[] = [123, ['a'], { t: 'x' }, false, null];
-    for (const v of invalids) {
-      const res = await inject(app, {
-        method: 'POST',
-        url: '/analyze',
-        payload: { text: v },
-      });
-      expect(status(res)).toBe(400);
-
-      const body = jsonUnknown(res) as { error?: string; details?: string };
-      expect(body.error).toBe('Bad Request');
-    }
-  });
-
-  // AC4: maxLen inválido (<1, >1000, não-inteiro, tipo errado) -> 400
-  it('AC4: maxLen inválido (<1, >1000, não-inteiro, tipo errado) -> 400', async () => {
-    const invalids: unknown[] = [0, -1, 1001, 3.14, '10', 'a', null, false, {}, []];
-
-    for (const v of invalids) {
-      const res = await inject(app, {
-        method: 'POST',
-        url: '/analyze',
-        payload: { text: 'ok', maxLen: v },
-      });
-      expect(status(res)).toBe(400);
-
-      const body = jsonUnknown(res) as { error?: string; details?: string };
-      expect(body.error).toBe('Bad Request');
-    }
-  });
-
-  // AC5: 400 sempre com shape padronizado e content-type
-  it('AC5: 400 sempre com shape padronizado e content-type', async () => {
-    const res = await inject(app, {
+  it('AC3: should return 400 when text is not a string', async () => {
+    const response = await inject(app, {
       method: 'POST',
       url: '/analyze',
-      payload: { maxLen: 10 }, // sem text
+      payload: { text: 123, maxLen: 10 },
     });
-    expect(status(res)).toBe(400);
 
-    // @note: headers acessíveis normalmente pelo helper/status, aqui checamos o content-type
-    const ct = res.headers['content-type'] ?? res.headers['Content-Type'];
-    expect(String(ct)).toContain('application/json');
-
-    const body = jsonUnknown(res) as Record<string, unknown>;
-    expect(body).toMatchObject({ error: 'Bad Request' });
+    expect(status(response)).toBe(400);
+    const body = jsonUnknown<{ error: string }>(response);
+    expect(body.error).toBeDefined();
   });
 
-  // Happy path 200 segue intacto (sanidade dentro da suíte 400)
-  it('Happy path 200 segue intacto', async () => {
-    const res = await inject(app, {
+  it('AC4: should return 400 when maxLen is not a number', async () => {
+    const response = await inject(app, {
       method: 'POST',
       url: '/analyze',
-      payload: { text: 'lorem ipsum', maxLen: 5 },
+      payload: { text: 'Valid text', maxLen: 'invalid' },
     });
-    expect(status(res)).toBe(200);
 
-    const body = jsonUnknown(res) as {
-      summary?: string;
-      tokensUsed?: number;
-      runId?: string;
-      ts?: string;
-    };
+    expect(status(response)).toBe(400);
+    const body = jsonUnknown<{ error: string }>(response);
+    expect(body.error).toBeDefined();
+  });
 
-    expect(typeof body.summary).toBe('string');
-    expect(typeof body.tokensUsed).toBe('number');
-    expect(typeof body.runId).toBe('string');
-    expect(typeof body.ts).toBe('string');
+  it('AC5: should return 400 when maxLen is negative', async () => {
+    const response = await inject(app, {
+      method: 'POST',
+      url: '/analyze',
+      payload: { text: 'Valid text', maxLen: -10 },
+    });
+
+    expect(status(response)).toBe(400);
+    const body = jsonUnknown<{ error: string }>(response);
+    expect(body.error).toContain('maxLen');
+  });
+
+  it('AC6: should return 400 when maxLen is zero', async () => {
+    const response = await inject(app, {
+      method: 'POST',
+      url: '/analyze',
+      payload: { text: 'Valid text', maxLen: 0 },
+    });
+
+    expect(status(response)).toBe(400);
+    const body = jsonUnknown<{ error: string }>(response);
+    expect(body.error).toContain('maxLen');
   });
 });

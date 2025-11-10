@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+info(){ echo -e "${GREEN}[info]${NC} $*"; }
+ok(){ echo -e "${GREEN}[ok]${NC} $*"; }
+warn(){ echo -e "${YELLOW}[warn]${NC} $*"; }
+fail(){ echo -e "${RED}[fail]${NC} $*"; }
+
+CHECKLIST="42_pipeline_checklist.sh"
+[ -f "$CHECKLIST" ] || { fail "Arquivo não encontrado: $CHECKLIST"; exit 1; }
+
+info "Criando backup: ${CHECKLIST}.bak"
+cp "$CHECKLIST" "${CHECKLIST}.bak"
+
+restore(){ warn "Restaurando checklist original…"; mv -f "${CHECKLIST}.bak" "$CHECKLIST"; }
+trap 'fail "Falha aplicando patch"; restore; exit 1' ERR
+
+cat > "$CHECKLIST" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
 REQUIRE_GLOBAL_CLI="${REQUIRE_GLOBAL_CLI:-1}"
 PREF_PORT="${PORT:-3200}"
 
@@ -132,3 +151,8 @@ ok "=========================================="
 ok "PIPELINE COMPLETO ✅"
 ok "=========================================="
 echo
+EOF
+
+chmod +x "$CHECKLIST"
+ok "Checklist patch aplicado"
+rm -f "${CHECKLIST}.bak"
