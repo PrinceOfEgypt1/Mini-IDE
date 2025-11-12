@@ -27,3 +27,5 @@ node packages/cli/dist/index.js analyze --base "http://127.0.0.1:3200" --input "
 - [Discussão: Mini-IDE v1.0.14 — pipeline verde](https://github.com/PrinceOfEgypt1/Mini-IDE/discussions/5)
 
 - [Discussão: Mini-IDE v1.0.15 — pipeline verde](https://github.com/PrinceOfEgypt1/Mini-IDE/discussions/8)
+
+- [Discussão: Mini-IDE v1.0.16 — pipeline verde](https://github.com/PrinceOfEgypt1/Mini-IDE/discussions/12)
