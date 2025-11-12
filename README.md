@@ -25,3 +25,5 @@ node packages/cli/dist/index.js analyze --base "http://127.0.0.1:3200" --input "
 - [v1.0.14](https://github.com/PrinceOfEgypt1/Mini-IDE/releases/tag/v1.0.14) — pipeline verde, pre-commit unificado, CLI tolerante
 
 - [Discussão: Mini-IDE v1.0.14 — pipeline verde](https://github.com/PrinceOfEgypt1/Mini-IDE/discussions/5)
+
+- [Discussão: Mini-IDE v1.0.15 — pipeline verde](https://github.com/PrinceOfEgypt1/Mini-IDE/discussions/8)
