@@ -1,13 +1,43 @@
+#!/usr/bin/env bash
+# Script: packages/server/scripts/04_fix_index_signature.sh
+# Objetivo: Corrigir erros TS4111 de index signature
+# Uso: bash packages/server/scripts/04_fix_index_signature.sh
+
+set -euo pipefail
+
+echo "[info] Corrigindo erros TS4111 no arquivo index.ts"
+
+TARGET_FILE="packages/server/src/index.ts"
+
+if [ ! -f "${TARGET_FILE}" ]; then
+  echo "[erro] Arquivo ${TARGET_FILE} não encontrado"
+  exit 1
+fi
+
+# Criar backup
+cp "${TARGET_FILE}" "${TARGET_FILE}.bak"
+echo "[info] Backup criado: ${TARGET_FILE}.bak"
+
+# Aplicar correções usando sed
+# Substituir req.text por req['text']
+# Substituir req.maxLen por req['maxLen']
+
+cat > "${TARGET_FILE}" << 'EOF'
 /**
  * Mini-IDE Server - HTTP API for analysis and code generation
- *
+ * 
  * @module server
  * @packageDocumentation
  */
 
-import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { MiniIDEError, ValidationError, ServiceUnavailableError } from './errors.js';
+import {
+  MiniIDEError,
+  ValidationError,
+  ServiceUnavailableError,
+  InternalServerError,
+} from './errors.js';
 import { checkBudget, recordUsage, estimateCost } from './budget.js';
 
 /**
@@ -32,7 +62,7 @@ const MIN_MAX_LEN = 1;
 
 /**
  * Response structure for /analyze endpoint
- *
+ * 
  * @public
  */
 export interface AnalyzeResponse {
@@ -59,7 +89,7 @@ export interface AnalyzeResponse {
 
 /**
  * Request structure for /analyze endpoint
- *
+ * 
  * @public
  */
 export interface AnalyzeRequest {
@@ -76,7 +106,7 @@ export interface AnalyzeRequest {
 
 /**
  * Error response structure
- *
+ * 
  * @public
  */
 export interface ErrorResponse {
@@ -109,12 +139,13 @@ export interface ErrorResponse {
 /**
  * Simulate LLM processing (mock for current implementation)
  * In production, this would call actual LLM service
- *
+ * 
  * @param text - Text to process
  * @param maxLen - Maximum length for summary
  * @returns Analysis response
  * @throws {ServiceUnavailableError} When LLM service is unavailable
- *
+ * @throws {InternalServerError} When processing fails
+ * 
  * @internal
  */
 function simulateLLMProcessing(text: string, maxLen: number): AnalyzeResponse {
@@ -131,13 +162,14 @@ function simulateLLMProcessing(text: string, maxLen: number): AnalyzeResponse {
 
 /**
  * Process analysis request with budget control and error handling
- *
+ * 
  * @param text - Text to analyze
  * @param maxLen - Maximum length for summary
  * @returns Analysis response
  * @throws {BudgetExceededError} When budget is insufficient
  * @throws {ServiceUnavailableError} When LLM service is unavailable
- *
+ * @throws {InternalServerError} When processing fails
+ * 
  * @internal
  */
 function processAnalyze(text: string, maxLen: number): AnalyzeResponse {
@@ -198,10 +230,10 @@ function processAnalyze(text: string, maxLen: number): AnalyzeResponse {
 
 /**
  * Validate request body for /analyze endpoint
- *
+ * 
  * @param body - Request body to validate
  * @throws {ValidationError} When validation fails
- *
+ * 
  * @internal
  */
 function validateAnalyzeRequest(body: unknown): asserts body is AnalyzeRequest {
@@ -221,8 +253,7 @@ function validateAnalyzeRequest(body: unknown): asserts body is AnalyzeRequest {
     throw new ValidationError('Campo "text" deve ser uma string');
   }
 
-  const textValue = req['text'];
-  if (textValue.trim() === '') {
+  if ((req['text'] as string).trim() === '') {
     throw new ValidationError('Campo "text" não pode estar vazio');
   }
 
@@ -232,12 +263,11 @@ function validateAnalyzeRequest(body: unknown): asserts body is AnalyzeRequest {
       throw new ValidationError('Campo "maxLen" deve ser um número');
     }
 
-    const maxLenValue = req['maxLen'];
-    if (maxLenValue < MIN_MAX_LEN) {
+    if ((req['maxLen'] as number) < MIN_MAX_LEN) {
       throw new ValidationError(`Campo "maxLen" deve ser >= ${MIN_MAX_LEN}`);
     }
 
-    if (maxLenValue > MAX_LEN_LIMIT) {
+    if ((req['maxLen'] as number) > MAX_LEN_LIMIT) {
       throw new ValidationError(`Campo "maxLen" deve ser <= ${MAX_LEN_LIMIT}`);
     }
   }
@@ -245,16 +275,16 @@ function validateAnalyzeRequest(body: unknown): asserts body is AnalyzeRequest {
 
 /**
  * Register HTTP routes on Fastify instance
- *
+ * 
  * @param app - Fastify instance
  * @returns Fastify instance with registered routes
- *
+ * 
  * @public
  */
 export function registerRoutes(app: FastifyInstance): FastifyInstance {
   /**
    * Health check endpoint
-   *
+   * 
    * @route GET /healthz
    * @returns {object} 200 - Health status
    */
@@ -264,7 +294,7 @@ export function registerRoutes(app: FastifyInstance): FastifyInstance {
 
   /**
    * Analyze text endpoint with budget control and error handling
-   *
+   * 
    * @route POST /analyze
    * @param {AnalyzeRequest} request.body - Text and optional maxLen
    * @returns {AnalyzeResponse} 200 - Analysis result
@@ -297,13 +327,13 @@ export function registerRoutes(app: FastifyInstance): FastifyInstance {
 
 /**
  * Handle errors and return appropriate HTTP response
- *
+ * 
  * @param error - Error to handle
  * @param requestId - Request ID for tracing
  * @param timestamp - Timestamp of the error
  * @param reply - Fastify reply object
  * @returns Fastify reply with error response
- *
+ * 
  * @internal
  */
 function handleError(
@@ -367,9 +397,9 @@ function handleError(
 
 /**
  * Initialize server with routes
- *
+ * 
  * @param app - Fastify instance
- *
+ * 
  * @public
  */
 export function createServer(app: FastifyInstance): void {
@@ -378,7 +408,7 @@ export function createServer(app: FastifyInstance): void {
 
 /**
  * Main entry point - start HTTP server
- *
+ * 
  * @internal
  */
 async function main(): Promise<void> {
@@ -401,3 +431,25 @@ async function main(): Promise<void> {
 if (import.meta.url === `file://${process.argv[1]}`) {
   void main();
 }
+EOF
+
+echo "[ok] Arquivo ${TARGET_FILE} corrigido"
+echo "[info] Principais mudanças:"
+echo "  - req.text → req['text']"
+echo "  - req.maxLen → req['maxLen']"
+echo "  - Adicionados casts explícitos onde necessário"
+
+# Executar build para validar
+echo ""
+echo "[info] Validando correções com build..."
+pnpm --filter @mini-ide/server build
+
+if [ $? -eq 0 ]; then
+  echo "[ok] Build concluído com sucesso!"
+  echo "[info] Backup mantido em: ${TARGET_FILE}.bak"
+else
+  echo "[erro] Build falhou. Restaurando backup..."
+  mv "${TARGET_FILE}.bak" "${TARGET_FILE}"
+  echo "[erro] Backup restaurado"
+  exit 1
+fi

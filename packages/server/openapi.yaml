@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Mini-IDE Server API
+  description: |
+    API HTTP para análise de texto e geração de código assistida por IA.
+
+    ## Orçamento e Controle de Custos
+
+    O sistema implementa controle de orçamento para evitar gastos excessivos:
+    - Limite padrão: R$ 5,00 por sessão
+    - Estimativa de custo antes de processamento
+    - Retorno 402 quando orçamento insuficiente
+
+    ## Rate Limiting
+
+    - 10 requisições por minuto por IP (planejado)
+
+    ## Autenticação
+
+    Atualmente não requer autenticação (ambiente de desenvolvimento).
+
+  version: 1.0.12
+  contact:
+    name: Mini-IDE Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://127.0.0.1:3200
+    description: Servidor de desenvolvimento local
+
+tags:
+  - name: health
+    description: Endpoints de health check
+  - name: analysis
+    description: Endpoints de análise de texto
+
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      description: Verifica se o servidor está operacional
+      operationId: healthCheck
+      tags:
+        - health
+      responses:
+        '200':
+          description: Servidor operacional
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                timestamp: '2024-11-13T10:30:00.000Z'
+
+  /analyze:
+    post:
+      summary: Analisar texto
+      description: |
+        Analisa o texto fornecido e retorna um resumo com metadados.
+
+        ## Validações
+
+        - `text` é obrigatório e não pode estar vazio
+        - `maxLen` deve estar entre 1 e 1000
+        - Orçamento disponível deve cobrir o custo estimado
+
+        ## Fallback
+
+        Se o serviço de LLM estiver indisponível, retorna truncamento simples
+        do texto sem processamento avançado.
+
+      operationId: analyzeText
+      tags:
+        - analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+            examples:
+              basic:
+                summary: Requisição básica
+                value:
+                  text: 'Olá, Mini-IDE!'
+                  maxLen: 10
+              withoutMaxLen:
+                summary: Sem especificar maxLen (usa padrão 100)
+                value:
+                  text: 'Texto longo que será truncado automaticamente'
+              longText:
+                summary: Texto longo com limite alto
+                value:
+                  text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit...'
+                  maxLen: 500
+
+      responses:
+        '200':
+          description: Análise realizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzeResponse'
+              example:
+                summary: 'Olá, Mini'
+                tokensUsed: 2
+                runId: 'run-550e8400-e29b-41d4-a716-446655440000'
+                timestamp: '2024-11-13T10:30:00.000Z'
+
+        '400':
+          description: Erro de validação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingText:
+                  summary: Campo text ausente
+                  value:
+                    error: 'Campo obrigatório ausente: text'
+                    code: 'VALIDATION_ERROR'
+                    requestId: 'req-550e8400-e29b-41d4-a716-446655440000'
+                    timestamp: '2024-11-13T10:30:00.000Z'
+                emptyText:
+                  summary: Campo text vazio
+                  value:
+                    error: 'Campo "text" não pode estar vazio'
+                    code: 'VALIDATION_ERROR'
+                    requestId: 'req-550e8400-e29b-41d4-a716-446655440000'
+                    timestamp: '2024-11-13T10:30:00.000Z'
+                invalidMaxLen:
+                  summary: maxLen inválido
+                  value:
+                    error: 'Campo "maxLen" deve ser >= 1'
+                    code: 'VALIDATION_ERROR'
+                    requestId: 'req-550e8400-e29b-41d4-a716-446655440000'
+                    timestamp: '2024-11-13T10:30:00.000Z'
+
+        '402':
+          description: Orçamento excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Orçamento insuficiente. Necessário: R$ 0.0050, Disponível: R$ 0.0020'
+                code: 'BUDGET_EXCEEDED'
+                requestId: 'req-550e8400-e29b-41d4-a716-446655440000'
+                timestamp: '2024-11-13T10:30:00.000Z'
+
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Erro interno do servidor'
+                code: 'INTERNAL_ERROR'
+                requestId: 'req-550e8400-e29b-41d4-a716-446655440000'
+                timestamp: '2024-11-13T10:30:00.000Z'
+
+        '503':
+          description: Serviço temporariamente indisponível
+          headers:
+            Retry-After:
+              description: Tempo sugerido para tentar novamente (em segundos)
+              schema:
+                type: integer
+              example: 30
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: 'Serviço de LLM temporariamente indisponível'
+                code: 'SERVICE_UNAVAILABLE'
+                requestId: 'req-550e8400-e29b-41d4-a716-446655440000'
+                timestamp: '2024-11-13T10:30:00.000Z'
+                retryAfter: 30
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Status do servidor
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp ISO 8601 da verificação
+
+    AnalyzeRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Texto a ser analisado
+          example: 'Olá, Mini-IDE!'
+        maxLen:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 100
+          description: Comprimento máximo do resumo (padrão 100)
+          example: 50
+
+    AnalyzeResponse:
+      type: object
+      required:
+        - summary
+        - tokensUsed
+        - runId
+        - timestamp
+      properties:
+        summary:
+          type: string
+          description: Resumo do texto (truncado conforme maxLen)
+          example: 'Olá, Mini'
+        tokensUsed:
+          type: integer
+          minimum: 0
+          description: Número de tokens processados
+          example: 2
+        runId:
+          type: string
+          pattern: '^run-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          description: Identificador único da execução
+          example: 'run-550e8400-e29b-41d4-a716-446655440000'
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp ISO 8601 da análise
+          example: '2024-11-13T10:30:00.000Z'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+        - requestId
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Mensagem de erro em português
+          example: 'Campo obrigatório ausente: text'
+        code:
+          type: string
+          description: Código do erro para categorização
+          enum:
+            - VALIDATION_ERROR
+            - BUDGET_EXCEEDED
+            - SERVICE_UNAVAILABLE
+            - INTERNAL_ERROR
+          example: 'VALIDATION_ERROR'
+        requestId:
+          type: string
+          pattern: '^req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          description: ID da requisição para rastreamento
+          example: 'req-550e8400-e29b-41d4-a716-446655440000'
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp ISO 8601 do erro
+          example: '2024-11-13T10:30:00.000Z'
+        retryAfter:
+          type: integer
+          minimum: 1
+          description: Tempo sugerido para retry em segundos (apenas para 503)
+          example: 30
