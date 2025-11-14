@@ -73,7 +73,7 @@ export function status(response: TestResponse): number {
 /**
  * Parse JSON body with type guard validation
  */
-export function jsonUnknown<T extends Record<string, unknown>>(response: TestResponse): T {
+export function jsonUnknown<T extends object>(response: TestResponse): T {
   const parsed = JSON.parse(response.body) as unknown;
 
   // Type guard: ensure parsed is an object
