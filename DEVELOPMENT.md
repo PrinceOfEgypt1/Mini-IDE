@@ -247,6 +247,75 @@ O resultado normalmente é persistido em `bundles/<versão>/...` (dependendo da 
 
 ---
 
+### 5.5 Contrato oficial do endpoint POST /analyze
+
+**Versão do contrato:** 1.0.0  
+**Última atualização:** 2024-11-16  
+**HU:** HU-Server-Analyze-Shape-Contract
+
+O endpoint `POST /analyze` retorna um JSON estruturado que segue o contrato oficial definido em `@mini-ide/shared/types/analyze-response.ts`.
+
+#### Campos obrigatórios
+
+Todos os campos abaixo DEVEM estar presentes em toda resposta 2xx do endpoint:
+
+| Campo          | Tipo     | Descrição                                                                                   |
+| -------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `summary`      | `string` | Resumo/saída principal da análise. Comprimento respeita o parâmetro `maxLen` da requisição. |
+| `inputLength`  | `number` | Número de caracteres do texto de entrada (≥ 0).                                             |
+| `outputLength` | `number` | Número de caracteres do resumo gerado (≥ 0).                                                |
+| `requestId`    | `string` | Identificador único da requisição (UUID v4). Usado para correlação de logs.                 |
+| `timestamp`    | `string` | Timestamp ISO 8601 da geração da resposta (ex: `2024-11-16T14:30:00.000Z`).                 |
+
+#### Campos opcionais
+
+Estes campos podem ou não estar presentes:
+
+| Campo             | Tipo     | Descrição                                                    |
+| ----------------- | -------- | ------------------------------------------------------------ |
+| `budgetUsed`      | `number` | Quantidade de orçamento consumida nesta requisição (≥ 0).    |
+| `budgetRemaining` | `number` | Quantidade de orçamento restante após esta requisição (≥ 0). |
+
+#### Exemplo de resposta válida
+
+```json
+{
+  "summary": "Este é um resumo de teste do sistema Mini-IDE",
+  "inputLength": 150,
+  "outputLength": 47,
+  "requestId": "a1b2c3d4-e5f6-4789-a012-3456789abcde",
+  "timestamp": "2024-11-16T14:30:00.000Z",
+  "budgetUsed": 0.05,
+  "budgetRemaining": 4.95
+}
+```
+
+#### Validação programática
+
+Para validar se um objeto JavaScript corresponde ao contrato:
+
+```typescript
+import { isAnalyzeResponse } from '@mini-ide/shared';
+
+const response = await fetch('http://127.0.0.1:3200/analyze', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ text: 'Teste', maxLen: 100 }),
+}).then((r) => r.json());
+
+if (isAnalyzeResponse(response)) {
+  console.log('Resposta válida:', response.summary);
+} else {
+  console.error('Resposta inválida - não respeita o contrato');
+}
+```
+
+#### Resiliência e versionamento
+
+O contrato é **resiliente a campos extras**: respostas que contêm campos adicionais não documentados (ex: `modelUsed`, `processingTime`) continuam válidas. Isso permite evolução futura do endpoint sem quebrar consumidores existentes.
+
+Ao adicionar novos campos obrigatórios no futuro, deve-se incrementar a versão do contrato e manter compatibilidade retroativa por pelo menos 3 releases.
+
 ## 6. Pipeline local oficial
 
 Antes de abrir PR (ou de considerar uma feature “pronta”), o fluxo recomendado é:

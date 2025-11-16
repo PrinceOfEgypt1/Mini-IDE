@@ -1,5 +1,32 @@
 #!/usr/bin/env bash
 ################################################################################
+# Script: 10_fix_checklist_readonly.sh
+# Versão: 1.0.0
+# Data: 2024-11-16
+#
+# Objetivo:
+#   Substituir 42_pipeline_checklist.sh com versão corrigida
+#
+################################################################################
+
+set -euo pipefail
+
+readonly GREEN='\033[0;32m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m'
+
+log_info() { echo -e "${BLUE}[info]${NC} $1"; }
+log_ok() { echo -e "${GREEN}[ok]${NC} $1"; }
+
+log_info "Aplicando correção no 42_pipeline_checklist.sh..."
+
+# Fazer backup
+cp 42_pipeline_checklist.sh 42_pipeline_checklist.sh.backup3
+
+# Substituir arquivo com versão corrigida
+cat > 42_pipeline_checklist.sh <<'CHECKLIST_FIXED'
+#!/usr/bin/env bash
+################################################################################
 # Script: 42_pipeline_checklist.sh
 # Versão: 1.1.1 (corrigido erro de readonly variable)
 # Data: 2024-11-16
@@ -252,3 +279,12 @@ else
   echo "════════════════════════════════════════════════════════════════"
   exit 1
 fi
+CHECKLIST_FIXED
+
+chmod +x 42_pipeline_checklist.sh
+
+log_ok "Arquivo 42_pipeline_checklist.sh substituído"
+log_ok "Backup criado: 42_pipeline_checklist.sh.backup3"
+echo ""
+log_ok "Correção concluída! Execute novamente:"
+echo "   REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh"
