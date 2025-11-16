@@ -1,86 +1,107 @@
 /**
- * Test utilities for server package
- * Provides strongly-typed helpers for Fastify testing
+ * @file test-utils.ts
+ * @description Utilitários para testes do servidor (API retrocompatível)
+ *
+ * CHANGELOG v1.0.17-patch3:
+ * - API retrocompatível: aceita inject(server, opts) OU inject(opts)
+ * - API retrocompatível: aceita shutdown(server) OU shutdown()
+ * - jsonUnknown com suporte a type generics
+ *
+ * @version 1.0.17-patch3
  */
 
-import Fastify, { type FastifyInstance } from 'fastify';
-import { createServer } from '../src/index.js';
+import type { FastifyInstance } from 'fastify';
+import type { InjectOptions, Response } from 'light-my-request';
+import { server } from '../src/index.js';
 
 /**
- * Injectable request configuration
+ * Instância do servidor para uso nos testes
  */
-export interface InjectableRequest {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
-  url: string;
-  payload?: string | object;
-  headers?: Record<string, string>;
-}
+let testServer: FastifyInstance | null = null;
 
 /**
- * Test response wrapper with typed body parsing
- */
-export interface TestResponse {
-  statusCode: number;
-  headers: Record<string, string | string[] | number | undefined>;
-  body: string;
-}
-
-/**
- * Build a test server instance
+ * Inicializa o servidor para testes
+ *
+ * @returns Promise com instância do servidor pronta
  */
 export async function build(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
-  createServer(app);
-  await app.ready();
-  return app;
+  if (!testServer) {
+    testServer = server;
+    await testServer.ready();
+  }
+  return testServer;
 }
 
 /**
- * Shutdown server gracefully
+ * Fecha o servidor após os testes
+ * RETROCOMPATÍVEL: aceita shutdown(server) OU shutdown()
+ *
+ * @param _serverInstance - (Opcional) instância do servidor (ignorada, mantida por retrocompatibilidade)
  */
-export async function shutdown(server: FastifyInstance): Promise<void> {
-  await server.close();
+export async function shutdown(_serverInstance?: FastifyInstance): Promise<void> {
+  // Ignora _serverInstance - mantido apenas para retrocompatibilidade
+  if (testServer) {
+    await testServer.close();
+    testServer = null;
+  }
 }
 
 /**
- * Inject HTTP request into server
+ * Helper para fazer requisições de teste
+ * RETROCOMPATÍVEL: aceita inject(server, opts) OU inject(opts)
+ *
+ * @param serverOrOptions - Servidor (ignorado) OU opções da requisição
+ * @param optionsIfServerProvided - Opções se primeiro param for servidor
+ * @returns Promise com resposta da requisição
  */
 export async function inject(
-  server: FastifyInstance,
-  request: InjectableRequest,
-): Promise<TestResponse> {
-  const response = await server.inject({
-    method: request.method,
-    url: request.url,
-    payload: request.payload,
-    headers: request.headers,
-  });
+  serverOrOptions: FastifyInstance | InjectOptions,
+  optionsIfServerProvided?: InjectOptions,
+): Promise<Response> {
+  if (!testServer) {
+    await build();
+  }
 
-  return {
-    statusCode: response.statusCode,
-    headers: response.headers,
-    body: response.body,
-  };
+  // Detectar qual assinatura foi usada
+  const options: InjectOptions = optionsIfServerProvided
+    ? optionsIfServerProvided // inject(server, options) - API antiga
+    : (serverOrOptions as InjectOptions); // inject(options) - API nova
+
+  return testServer!.inject(options);
 }
 
 /**
- * Extract status code from response
+ * Type guard para verificar se objeto é um Record válido
  */
-export function status(response: TestResponse): number {
+function isRecord(obj: unknown): obj is Record<string, unknown> {
+  return typeof obj === 'object' && obj !== null && !Array.isArray(obj);
+}
+
+/**
+ * Helper para extrair status code de resposta
+ */
+export function status(response: Response): number {
   return response.statusCode;
 }
 
 /**
- * Parse JSON body with type guard validation
+ * Helper para parsear JSON de resposta com type safety
+ * SUPORTA GENERICS: jsonUnknown<Type>(response)
+ *
+ * @param response - Resposta da requisição
+ * @returns Objeto parseado do JSON
+ * @throws Error se o body não for JSON válido
  */
-export function jsonUnknown<T extends object>(response: TestResponse): T {
-  const parsed = JSON.parse(response.body) as unknown;
-
-  // Type guard: ensure parsed is an object
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new TypeError('Expected JSON response to be a non-null object');
+export function jsonUnknown<T = Record<string, unknown>>(response: Response): T {
+  try {
+    const parsed: unknown = JSON.parse(response.body);
+    if (isRecord(parsed)) {
+      return parsed as T;
+    }
+    throw new Error('Response body não é um objeto JSON válido');
+  } catch (error) {
+    throw new Error(
+      `Falha ao parsear JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
-
-  // Narrow to Record<string, unknown>
-  return parsed as T;
 }

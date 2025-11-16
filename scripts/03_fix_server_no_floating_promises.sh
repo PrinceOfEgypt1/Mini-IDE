@@ -1,3 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[info] Ajustando no-floating-promises em packages/server/src/index.ts"
+echo "[info] Data: $(date)"
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+INDEX_FILE="${ROOT_DIR}/packages/server/src/index.ts"
+
+if [[ ! -f "${INDEX_FILE}" ]]; then
+  echo "[erro] Arquivo não encontrado: ${INDEX_FILE}"
+  exit 1
+fi
+
+BACKUP_SUFFIX=".bak.no_floating_promises.$(date +%Y%m%d-%H%M%S)"
+cp "${INDEX_FILE}" "${INDEX_FILE}${BACKUP_SUFFIX}"
+echo "[ok] Backup criado: ${INDEX_FILE}${BACKUP_SUFFIX}"
+
+echo "[info] Reescrevendo index.ts com correção em start()..."
+
+cat <<'EOF' > "${INDEX_FILE}"
 /**
  * @file index.ts
  * @version 1.0.17-patch6
@@ -59,21 +80,21 @@ function generateRequestId(): string {
 
 function mockAnalyze(text: string, maxLen: number, budgetContext: BudgetContext): string {
   const estimatedCost = (text.length / 1000) * 0.01;
-
+  
   const canProceed = budgetContext.checkBudget(estimatedCost);
   if (!canProceed) {
     throw new Error('Budget insuficiente para processar esta requisição');
   }
-
+  
   let summary: string;
   if (text.length > maxLen) {
     summary = text.substring(0, maxLen - 3) + '...';
   } else {
     summary = text;
   }
-
+  
   budgetContext.recordUsage(estimatedCost);
-
+  
   return summary;
 }
 
@@ -82,9 +103,9 @@ server.post<{ Body: AnalyzeRequestBody }>(
   async (request: FastifyRequest<{ Body: AnalyzeRequestBody }>, reply: FastifyReply) => {
     const requestId = generateRequestId();
     const timestamp = new Date().toISOString();
-
+    
     const budgetContext = createBudgetContext(DEFAULT_BUDGET_LIMIT);
-
+    
     request.log.info({
       event: 'analyze_request',
       requestId,
@@ -96,7 +117,7 @@ server.post<{ Body: AnalyzeRequestBody }>(
 
     // CORREÇÃO CIENTÍFICA v1.0.17-patch6:
     // Separar validações para evitar !'' === true
-
+    
     // Validação 1: text ausente (undefined ou null)
     if (!request.body || request.body.text === undefined || request.body.text === null) {
       request.log.warn({
@@ -146,9 +167,9 @@ server.post<{ Body: AnalyzeRequestBody }>(
 
     try {
       const summary = mockAnalyze(request.body.text, maxLen, budgetContext);
-
+      
       const budgetState = budgetContext.getState();
-
+      
       const response: AnalyzeResponse = {
         summary,
         inputLength: request.body.text.length,
@@ -169,6 +190,7 @@ server.post<{ Body: AnalyzeRequestBody }>(
       });
 
       return reply.code(200).send(response);
+      
     } catch (error) {
       if (error instanceof Error && error.message.includes('Budget')) {
         request.log.warn({
@@ -183,7 +205,7 @@ server.post<{ Body: AnalyzeRequestBody }>(
           timestamp,
         });
       }
-
+      
       request.log.error({
         event: 'analyze_error',
         requestId,
@@ -196,12 +218,12 @@ server.post<{ Body: AnalyzeRequestBody }>(
         timestamp,
       });
     }
-  },
+  }
 );
 
 server.get('/healthz', async (request: FastifyRequest, reply: FastifyReply) => {
   const uptime = Date.now() - startTime;
-
+  
   const response: HealthResponse = {
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -224,14 +246,14 @@ async function start(): Promise<void> {
   try {
     const port = Number(process.env['PORT']) || DEFAULT_PORT;
     await server.listen({ port, host: '0.0.0.0' });
-
+    
     server.log.info({
       event: 'server_started',
       port,
       defaultBudgetLimit: DEFAULT_BUDGET_LIMIT,
       defaultMaxLen: DEFAULT_MAX_LEN,
     });
-
+    
     console.log(`[ok] Mini-IDE Server rodando em http://127.0.0.1:${port}`);
     console.log(`[info] Budget limit padrão: R$ ${DEFAULT_BUDGET_LIMIT.toFixed(2)} por requisição`);
     console.log(`[info] Endpoints disponíveis:`);
@@ -242,7 +264,7 @@ async function start(): Promise<void> {
       event: 'server_start_error',
       error: err instanceof Error ? err.message : 'Unknown error',
     });
-
+    
     if (process.env['NODE_ENV'] !== 'test') {
       process.exit(1);
     }
@@ -254,3 +276,24 @@ if (process.env['NODE_ENV'] !== 'test') {
 }
 
 export { server };
+EOF
+
+echo "[ok] index.ts reescrito com sucesso."
+
+echo "[info] Rodando lint em @mini-ide/server..."
+pnpm --filter @mini-ide/server lint
+
+echo "[info] Rodando typecheck em @mini-ide/server..."
+pnpm --filter @mini-ide/server typecheck
+
+echo "[info] Rodando testes em @mini-ide/server..."
+pnpm --filter @mini-ide/server test
+
+echo "=========================================="
+echo "✅ Correção no-floating-promises concluída com sucesso!"
+echo "=========================================="
+echo "[dica] Agora, na raiz, execute:"
+echo "       pnpm lint"
+echo "       pnpm test"
+echo "       pnpm typecheck"
+echo "       pnpm build"

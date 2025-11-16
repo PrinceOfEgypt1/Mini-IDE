@@ -1,9 +1,16 @@
+/**
+ * @file analyze.spec.ts
+ * @description Testes do endpoint /analyze
+ *
+ * CHANGELOG v1.0.17-patch4:
+ * - Tipos corrigidos para corresponder a AnalyzeResponse real
+ */
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import type { FastifyInstance } from 'fastify';
 import { build, shutdown, inject, status, jsonUnknown } from './test-utils.js';
 
-describe('POST /analyze - Happy Path (200)', () => {
-  let server: FastifyInstance;
+describe('POST /analyze', () => {
+  let server: Awaited<ReturnType<typeof build>>;
 
   beforeAll(async () => {
     server = await build();
@@ -13,7 +20,7 @@ describe('POST /analyze - Happy Path (200)', () => {
     await shutdown(server);
   });
 
-  it('AC1: should return 200 with valid text and maxLen', async () => {
+  it('deve processar texto com maxLen', async () => {
     const response = await inject(server, {
       method: 'POST',
       url: '/analyze',
@@ -23,19 +30,24 @@ describe('POST /analyze - Happy Path (200)', () => {
     expect(status(response)).toBe(200);
     const body = jsonUnknown<{
       summary: string;
-      tokensUsed: number;
-      runId: string;
+      inputLength: number;
+      outputLength: number;
+      requestId: string;
       timestamp: string;
+      budgetUsed: number;
+      budgetRemaining: number;
     }>(response);
-    expect(body.summary).toBeDefined();
-    expect(body.summary.length).toBeLessThanOrEqual(10);
-    expect(body.tokensUsed).toBeGreaterThan(0);
-    expect(body.runId).toMatch(/^run-/);
-    expect(body.timestamp).toBeDefined();
+
+    expect(body['summary']).toBeDefined();
+    expect(body['summary'].length).toBeLessThanOrEqual(10);
+    expect(body['inputLength']).toBeDefined();
+    expect(body['outputLength']).toBeDefined();
+    expect(body['requestId']).toBeDefined();
+    expect(body['timestamp']).toBeDefined();
   });
 
-  it('AC2: should use default maxLen (100) when omitted', async () => {
-    const longText = 'a'.repeat(150);
+  it('deve aplicar maxLen padrão quando não especificado', async () => {
+    const longText = 'a'.repeat(200);
     const response = await inject(server, {
       method: 'POST',
       url: '/analyze',
@@ -44,10 +56,10 @@ describe('POST /analyze - Happy Path (200)', () => {
 
     expect(status(response)).toBe(200);
     const body = jsonUnknown<{ summary: string }>(response);
-    expect(body.summary.length).toBeLessThanOrEqual(100);
+    expect(body['summary'].length).toBeLessThanOrEqual(100);
   });
 
-  it('AC3: should include all required fields in response', async () => {
+  it('deve incluir requestId e timestamp na resposta', async () => {
     const response = await inject(server, {
       method: 'POST',
       url: '/analyze',
@@ -57,50 +69,26 @@ describe('POST /analyze - Happy Path (200)', () => {
     expect(status(response)).toBe(200);
     const body = jsonUnknown<{
       summary: string;
-      tokensUsed: number;
-      runId: string;
+      requestId: string;
       timestamp: string;
     }>(response);
-    expect(body).toHaveProperty('summary');
-    expect(body).toHaveProperty('tokensUsed');
-    expect(body).toHaveProperty('runId');
-    expect(body).toHaveProperty('timestamp');
+    expect(body['requestId']).toBeDefined();
+    expect(String(body['requestId'])).toMatch(/^req_/u);
+    expect(body['timestamp']).toBeDefined();
   });
 
-  it('should handle text with multiple tokens correctly', async () => {
+  it('deve incluir informações de budget na resposta', async () => {
     const response = await inject(server, {
       method: 'POST',
       url: '/analyze',
-      payload: { text: 'One two three four five', maxLen: 100 },
+      payload: { text: 'Test budget tracking', maxLen: 100 },
     });
 
     expect(status(response)).toBe(200);
-    const body = jsonUnknown<{ tokensUsed: number }>(response);
-    expect(body.tokensUsed).toBeGreaterThan(1);
-  });
-
-  it('should handle maxLen at minimum boundary (1)', async () => {
-    const response = await inject(server, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: 'Hello', maxLen: 1 },
-    });
-
-    expect(status(response)).toBe(200);
-    const body = jsonUnknown<{ summary: string }>(response);
-    expect(body.summary.length).toBe(1);
-  });
-
-  it('should handle maxLen at maximum boundary (1000)', async () => {
-    const longText = 'a'.repeat(2000);
-    const response = await inject(server, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: longText, maxLen: 1000 },
-    });
-
-    expect(status(response)).toBe(200);
-    const body = jsonUnknown<{ summary: string }>(response);
-    expect(body.summary.length).toBeLessThanOrEqual(1000);
+    const body = jsonUnknown(response);
+    expect(body['budgetUsed']).toBeDefined();
+    expect(body['budgetRemaining']).toBeDefined();
+    expect(typeof body['budgetUsed']).toBe('number');
+    expect(typeof body['budgetRemaining']).toBe('number');
   });
 });

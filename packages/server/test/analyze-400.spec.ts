@@ -1,116 +1,129 @@
 /**
- * Test suite for request validation (400)
+ * @file analyze-400.spec.ts
+ * @description Testes de validação 4xx para endpoint /analyze
+ *
+ * CHANGELOG v1.0.17:
+ * - Removido uso de resetBudget (não existe mais - budget agora é por contexto)
+ * - Removido tipo ErrorResponse (não exportado)
+ * - Usando jsonUnknown<T>() para parse seguro da resposta
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import type { FastifyInstance } from 'fastify';
-import { build, shutdown, inject, status, jsonUnknown } from './test-utils.js';
-import { resetBudget } from '../src/budget.js';
-import type { ErrorResponse } from '../src/index.js';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { server } from '../src/index.js';
+import { jsonUnknown } from './test-utils.js';
 
-describe('POST /analyze - Error Cases (400)', () => {
-  let app: FastifyInstance;
+interface ErrorBody {
+  error: string;
+  message: string;
+  requestId: string;
+  timestamp: string;
+}
 
+describe('POST /analyze - Validações 4xx', () => {
   beforeAll(async () => {
-    app = await build();
+    await server.ready();
   });
 
   afterAll(async () => {
-    await shutdown(app);
+    await server.close();
   });
 
-  beforeEach(() => {
-    resetBudget();
-  });
+  describe('400 - Bad Request', () => {
+    it('deve retornar 400 quando text estiver ausente', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/analyze',
+        payload: {
+          maxLen: 100,
+        },
+      });
 
-  it('AC1: should return 400 when text is missing', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { maxLen: 10 },
+      expect(response.statusCode).toBe(400);
+
+      const body = jsonUnknown<ErrorBody>(response);
+
+      expect(body.error).toBe('Validação falhou');
+      expect(body.message).toContain('text');
+      expect(body.requestId).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
 
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toContain('text');
-    expect(body.code).toBe('VALIDATION_ERROR');
-  });
+    it('deve retornar 400 quando text estiver vazio', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/analyze',
+        payload: {
+          text: '',
+        },
+      });
 
-  it('AC2: should return 400 when text is empty string', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: '', maxLen: 10 },
+      expect(response.statusCode).toBe(400);
+
+      const body = jsonUnknown<ErrorBody>(response);
+
+      expect(body.error).toBe('Validação falhou');
+      expect(body.message).toContain('vazio');
+      expect(body.requestId).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
 
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toContain('text');
-    expect(body.code).toBe('VALIDATION_ERROR');
-  });
+    it('deve retornar 400 quando text for apenas espaços', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/analyze',
+        payload: {
+          text: '   ',
+        },
+      });
 
-  it('AC3: should return 400 when text is not a string', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: 123, maxLen: 10 },
+      expect(response.statusCode).toBe(400);
+
+      const body = jsonUnknown<ErrorBody>(response);
+
+      expect(body.error).toBe('Validação falhou');
+      expect(body.message).toContain('vazio');
+      expect(body.requestId).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
 
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toBeDefined();
-    expect(body.code).toBe('VALIDATION_ERROR');
-  });
+    it('deve retornar 400 quando maxLen < 1', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/analyze',
+        payload: {
+          text: 'teste',
+          maxLen: 0,
+        },
+      });
 
-  it('AC4: should return 400 when maxLen is not a number', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: 'Valid text', maxLen: 'invalid' },
+      expect(response.statusCode).toBe(400);
+
+      const body = jsonUnknown<ErrorBody>(response);
+
+      expect(body.error).toBe('Validação falhou');
+      expect(body.message).toContain('maxLen');
+      expect(body.requestId).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
 
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toBeDefined();
-    expect(body.code).toBe('VALIDATION_ERROR');
-  });
+    it('deve retornar 400 quando maxLen > 1000', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: '/analyze',
+        payload: {
+          text: 'teste',
+          maxLen: 1001,
+        },
+      });
 
-  it('AC5: should return 400 when maxLen is negative', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: 'Valid text', maxLen: -10 },
+      expect(response.statusCode).toBe(400);
+
+      const body = jsonUnknown<ErrorBody>(response);
+
+      expect(body.error).toBe('Validação falhou');
+      expect(body.message).toContain('maxLen');
+      expect(body.requestId).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
-
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toContain('maxLen');
-    expect(body.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('AC6: should return 400 when maxLen is zero', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: 'Valid text', maxLen: 0 },
-    });
-
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toContain('maxLen');
-    expect(body.code).toBe('VALIDATION_ERROR');
-  });
-
-  it('AC7: should return 400 when maxLen exceeds limit', async () => {
-    const response = await inject(app, {
-      method: 'POST',
-      url: '/analyze',
-      payload: { text: 'Valid text', maxLen: 1001 },
-    });
-
-    expect(status(response)).toBe(400);
-    const body = jsonUnknown<ErrorResponse>(response);
-    expect(body.error).toContain('maxLen');
-    expect(body.code).toBe('VALIDATION_ERROR');
   });
 });

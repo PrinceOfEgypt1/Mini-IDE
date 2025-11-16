@@ -1,115 +1,170 @@
 /**
- * Budget management for Mini-IDE Server
+ * @file budget.ts
+ * @description Sistema de controle de orçamento por contexto
  *
- * @module budget
- * @packageDocumentation
- */
-
-import { BudgetExceededError } from './errors.js';
-
-/**
- * Default budget limit in BRL (R$)
- */
-const DEFAULT_BUDGET_LIMIT = 5.0;
-
-/**
- * Estimated cost per 1000 tokens in BRL (DeepSeek-V3 pricing example)
- */
-const COST_PER_1K_TOKENS = 0.001;
-
-/**
- * Budget state for a session
+ * CHANGELOG v1.0.17:
+ * - Removido estado global globalBudgetUsed
+ * - Criada classe BudgetContext para isolamento por requisição
+ * - Budget agora é thread-safe para requisições concorrentes
+ * - Testes determinísticos sem flakiness
  *
- * @public
+ * @version 1.0.17
+ * @since 2024-11-15
+ */
+
+/**
+ * Estado do orçamento em um dado momento
  */
 export interface BudgetState {
   /**
-   * Total budget available in BRL
+   * Limite total de orçamento disponível (R$)
    */
   limit: number;
 
   /**
-   * Budget already used in BRL
+   * Quanto já foi utilizado (R$)
    */
   used: number;
 
   /**
-   * Budget remaining in BRL
+   * Quanto ainda resta disponível (R$)
    */
   remaining: number;
 }
 
 /**
- * In-memory budget tracker (simplified for current scope)
- * In production, this would be persisted per user/session
+ * Contexto de orçamento isolado por requisição
+ *
+ * Cada requisição deve ter seu próprio BudgetContext, garantindo:
+ * - Isolamento completo entre requisições concorrentes
+ * - Testes determinísticos sem estado compartilhado
+ * - Thread-safety sem necessidade de locks
+ *
+ * @example
+ * ```typescript
+ * const context = createBudgetContext(10.0);
+ *
+ * if (context.checkBudget(2.5)) {
+ *   // Processar operação
+ *   context.recordUsage(2.5);
+ * }
+ *
+ * const state = context.getState();
+ * console.log(`Usado: R$ ${state.used}, Restante: R$ ${state.remaining}`);
+ * ```
  */
-let globalBudgetUsed = 0;
+export interface BudgetContext {
+  /**
+   * Retorna snapshot do estado atual do budget
+   *
+   * @returns Estado completo (limit, used, remaining)
+   */
+  getState(): BudgetState;
 
-/**
- * Estimate cost for a given number of tokens
- *
- * @param tokens - Number of tokens to estimate
- * @returns Estimated cost in BRL
- *
- * @public
- */
-export function estimateCost(tokens: number): number {
-  return (tokens / 1000) * COST_PER_1K_TOKENS;
+  /**
+   * Verifica se há orçamento suficiente para um custo estimado
+   *
+   * @param estimatedCost - Custo estimado da operação (R$)
+   * @returns true se há budget suficiente, false caso contrário
+   */
+  checkBudget(estimatedCost: number): boolean;
+
+  /**
+   * Registra uso efetivo do orçamento
+   *
+   * @param actualCost - Custo real da operação executada (R$)
+   * @throws Error se o custo exceder o budget disponível
+   */
+  recordUsage(actualCost: number): void;
+
+  /**
+   * Retorna limite total do budget
+   *
+   * @returns Limite em R$
+   */
+  getLimit(): number;
+
+  /**
+   * Retorna quanto já foi usado
+   *
+   * @returns Uso acumulado em R$
+   */
+  getUsed(): number;
 }
 
 /**
- * Get current budget state
- *
- * @param budgetLimit - Budget limit (default: R$ 5.00)
- * @returns Current budget state
- *
- * @public
+ * Implementação interna de BudgetContext
  */
-export function getBudgetState(budgetLimit = DEFAULT_BUDGET_LIMIT): BudgetState {
-  return {
-    limit: budgetLimit,
-    used: globalBudgetUsed,
-    remaining: Math.max(0, budgetLimit - globalBudgetUsed),
-  };
-}
+class BudgetContextImpl implements BudgetContext {
+  private limit: number;
+  private used: number;
 
-/**
- * Check if budget allows processing the request
- *
- * @param estimatedTokens - Estimated tokens for the request
- * @param budgetLimit - Budget limit (default: R$ 5.00)
- * @throws {BudgetExceededError} When budget is insufficient
- *
- * @public
- */
-export function checkBudget(estimatedTokens: number, budgetLimit = DEFAULT_BUDGET_LIMIT): void {
-  const estimatedCost = estimateCost(estimatedTokens);
-  const state = getBudgetState(budgetLimit);
+  constructor(limit: number) {
+    if (limit <= 0) {
+      throw new Error('Budget limit deve ser > 0');
+    }
+    this.limit = limit;
+    this.used = 0;
+  }
 
-  if (estimatedCost > state.remaining) {
-    throw new BudgetExceededError(
-      `Orçamento insuficiente. Necessário: R$ ${estimatedCost.toFixed(4)}, Disponível: R$ ${state.remaining.toFixed(4)}`,
-    );
+  getState(): BudgetState {
+    return {
+      limit: this.limit,
+      used: this.used,
+      remaining: this.limit - this.used,
+    };
+  }
+
+  checkBudget(estimatedCost: number): boolean {
+    // Validar entrada
+    if (estimatedCost <= 0) {
+      return false;
+    }
+
+    const remaining = this.limit - this.used;
+    return estimatedCost <= remaining;
+  }
+
+  recordUsage(actualCost: number): void {
+    // Validar entrada
+    if (actualCost <= 0) {
+      throw new Error('Valor de uso deve ser > 0');
+    }
+
+    // Verificar se não excede limite
+    const remaining = this.limit - this.used;
+    if (actualCost > remaining) {
+      throw new Error(
+        `Tentativa de registrar uso que excede budget disponível. ` +
+          `Tentou usar: R$ ${actualCost.toFixed(2)}, ` +
+          `Disponível: R$ ${remaining.toFixed(2)}`,
+      );
+    }
+
+    this.used += actualCost;
+  }
+
+  getLimit(): number {
+    return this.limit;
+  }
+
+  getUsed(): number {
+    return this.used;
   }
 }
 
 /**
- * Record budget usage after processing
+ * Factory para criar contextos de budget isolados
  *
- * @param tokensUsed - Actual tokens used
+ * @param limit - Limite de orçamento em R$
+ * @returns Nova instância de BudgetContext
+ * @throws Error se limit <= 0
  *
- * @public
+ * @example
+ * ```typescript
+ * const context = createBudgetContext(10.0);
+ * ```
  */
-export function recordUsage(tokensUsed: number): void {
-  const cost = estimateCost(tokensUsed);
-  globalBudgetUsed += cost;
-}
-
-/**
- * Reset budget (for testing purposes)
- *
- * @internal
- */
-export function resetBudget(): void {
-  globalBudgetUsed = 0;
+export function createBudgetContext(limit: number): BudgetContext {
+  return new BudgetContextImpl(limit);
 }

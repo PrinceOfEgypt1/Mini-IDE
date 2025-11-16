@@ -1,0 +1,461 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[info] Iniciando correção de lint nos providers LLM (@mini-ide/shared)"
+echo "[info] Data: $(date)"
+
+# Detectar raiz do projeto (pasta Mini-IDE)
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+echo "[info] Diretório raiz detectado: ${ROOT_DIR}"
+cd "${ROOT_DIR}"
+
+SHARED_DIR="packages/shared"
+DEESEEK_FILE="${SHARED_DIR}/src/llm/DeepSeekProvider.ts"
+MOCK_FILE="${SHARED_DIR}/src/llm/MockLLMProvider.ts"
+FACTORY_FILE="${SHARED_DIR}/src/llm/LLMProviderFactory.ts"
+
+# Verificações básicas
+for f in "${DEESEEK_FILE}" "${MOCK_FILE}" "${FACTORY_FILE}"; do
+  if [[ ! -f "${f}" ]]; then
+    echo "[erro] Arquivo não encontrado: ${f}"
+    exit 1
+  fi
+done
+
+BACKUP_SUFFIX=".bak.lintfix.$(date +%Y%m%d-%H%M%S)"
+
+echo "[info] Criando backups dos arquivos atuais..."
+cp "${DEESEEK_FILE}" "${DEESEEK_FILE}${BACKUP_SUFFIX}"
+cp "${MOCK_FILE}" "${MOCK_FILE}${BACKUP_SUFFIX}"
+cp "${FACTORY_FILE}" "${FACTORY_FILE}${BACKUP_SUFFIX}"
+echo "[ok] Backups criados:"
+echo "     - ${DEESEEK_FILE}${BACKUP_SUFFIX}"
+echo "     - ${MOCK_FILE}${BACKUP_SUFFIX}"
+echo "     - ${FACTORY_FILE}${BACKUP_SUFFIX}"
+
+echo "[info] Reescrevendo DeepSeekProvider.ts (versão corrigida)..."
+cat <<'EOF' > "${DEESEEK_FILE}"
+/**
+ * @file DeepSeekProvider.ts
+ * @description Provider para DeepSeek-V3 (preparatório)
+ *
+ * Este provider implementa integração com a API do DeepSeek-V3.
+ * Na versão atual (1.0.17), ainda está em modo preparatório.
+ * A integração real com a API será implementada em HU-LLM-Client-DeepSeek.
+ *
+ * @version 1.0.17
+ * @since 2024-11-15
+ */
+
+import type { ILLMProvider, LLMAnalyzeOptions, LLMResponse, ModelInfo } from './ILLMProvider.js';
+
+/**
+ * Configuração do DeepSeekProvider
+ */
+export interface DeepSeekConfig {
+  /**
+   * API Key para autenticação no DeepSeek
+   */
+  apiKey: string;
+
+  /**
+   * URL base da API (para testes ou ambientes alternativos)
+   * @default "https://api.deepseek.com/v1"
+   */
+  baseUrl?: string;
+
+  /**
+   * Modelo específico do DeepSeek a ser usado
+   * @default "deepseek-chat"
+   */
+  model?: string;
+
+  /**
+   * Timeout padrão para requisições em ms
+   * @default 30000
+   */
+  defaultTimeoutMs?: number;
+}
+
+/**
+ * Provider para integração com DeepSeek-V3
+ *
+ * ⚠️ NOTA: Este é um provider preparatório. A implementação completa
+ * da integração com a API real do DeepSeek será feita na HU-LLM-Client-DeepSeek.
+ *
+ * Por enquanto, valida configurações e fornece estrutura base.
+ *
+ * @example
+ * ```typescript
+ * const provider = new DeepSeekProvider({
+ *   apiKey: process.env.DEEPSEEK_API_KEY!,
+ *   model: "deepseek-chat"
+ * });
+ * const response = await provider.analyze("Explique IA");
+ * ```
+ */
+export class DeepSeekProvider implements ILLMProvider {
+  private config: Required<DeepSeekConfig>;
+
+  constructor(config: DeepSeekConfig) {
+    // Validar API Key
+    if (!config.apiKey || config.apiKey.trim() === '') {
+      throw new Error('DeepSeekProvider: apiKey é obrigatória');
+    }
+
+    this.config = {
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl ?? 'https://api.deepseek.com/v1',
+      model: config.model ?? 'deepseek-chat',
+      defaultTimeoutMs: config.defaultTimeoutMs ?? 30000,
+    };
+  }
+
+  /**
+   * Analisa um prompt usando o modelo DeepSeek-V3.
+   *
+   * Implementação preparatória: ainda não chama a API real,
+   * mas já valida entrada e retorna uma resposta simulada.
+   */
+  analyze(prompt: string, _options?: LLMAnalyzeOptions): Promise<LLMResponse> {
+    // Validação básica
+    if (!prompt || prompt.trim() === '') {
+      throw new Error('DeepSeekProvider: Prompt não pode estar vazio');
+    }
+
+    const startTime = Date.now();
+
+    // ⚠️ IMPLEMENTAÇÃO PREPARATÓRIA
+    // A chamada real à API do DeepSeek será implementada em HU-LLM-Client-DeepSeek
+    // Por enquanto, retornamos uma resposta simulada para não quebrar testes
+
+    const content = `[PREPARATÓRIO] DeepSeekProvider recebeu: "${prompt.substring(0, 50)}..."`;
+    const processingTimeMs = Date.now() - startTime;
+
+    return Promise.resolve({
+      content,
+      usage: {
+        promptTokens: Math.ceil(prompt.length / 4),
+        completionTokens: Math.ceil(content.length / 4),
+        totalTokens: Math.ceil((prompt.length + content.length) / 4),
+      },
+      model: this.config.model,
+      processingTimeMs,
+      requestId: `deepseek_prep_${Date.now()}`,
+    });
+  }
+
+  /**
+   * Retorna informações estáticas sobre o modelo DeepSeek.
+   */
+  getModelInfo(): ModelInfo {
+    return {
+      name: this.config.model,
+      provider: 'DeepSeek',
+      version: 'v3',
+      maxContextTokens: 64000, // DeepSeek-V3 suporta até 64k tokens
+      supportsStreaming: true,
+    };
+  }
+
+  /**
+   * Verifica se o provider está saudável.
+   *
+   * Implementação preparatória: assume que está sempre saudável.
+   */
+  isHealthy(): Promise<boolean> {
+    // TODO: Implementar health check real
+    // - Fazer uma chamada leve à API (ex: listar modelos)
+    // - Verificar se responde com 200
+    // - Validar se API Key é válida
+
+    // Por enquanto, sempre retorna true (preparatório)
+    return Promise.resolve(true);
+  }
+}
+EOF
+echo "[ok] DeepSeekProvider.ts reescrito."
+
+echo "[info] Reescrevendo MockLLMProvider.ts (versão corrigida)..."
+cat <<'EOF' > "${MOCK_FILE}"
+/**
+ * @file MockLLMProvider.ts
+ * @description Provider mock para testes determinísticos
+ *
+ * Este provider simula comportamento de um LLM real mas com respostas
+ * previsíveis e controladas, ideal para testes unitários e integração.
+ *
+ * @version 1.0.17
+ * @since 2024-11-15
+ */
+
+import type { ILLMProvider, LLMAnalyzeOptions, LLMResponse, ModelInfo } from './ILLMProvider.js';
+
+/**
+ * Opções de configuração do MockLLMProvider
+ */
+export interface MockProviderOptions {
+  /**
+   * Delay artificial em ms para simular latência de rede
+   * @default 0
+   */
+  simulateDelayMs?: number;
+
+  /**
+   * Se true, simula falha aleatória (útil para testar error handling)
+   * @default false
+   */
+  simulateFailure?: boolean;
+
+  /**
+   * Resposta customizada ao invés do echo padrão
+   */
+  customResponse?: string;
+}
+
+/**
+ * Provider mock que simula comportamento de LLM para testes
+ *
+ * Por padrão, retorna um "echo" do prompt com metadados simulados.
+ * Pode ser configurado para simular delays, falhas e respostas customizadas.
+ *
+ * @example
+ * ```typescript
+ * const mock = new MockLLMProvider({ simulateDelayMs: 100 });
+ * const response = await mock.analyze("teste");
+ * expect(response.content).toContain("teste");
+ * ```
+ */
+export class MockLLMProvider implements ILLMProvider {
+  private options: Required<MockProviderOptions>;
+
+  constructor(options: MockProviderOptions = {}) {
+    this.options = {
+      simulateDelayMs: options.simulateDelayMs ?? 0,
+      simulateFailure: options.simulateFailure ?? false,
+      customResponse: options.customResponse ?? '',
+    };
+  }
+
+  async analyze(prompt: string, _options?: LLMAnalyzeOptions): Promise<LLMResponse> {
+    const startTime = Date.now();
+
+    // Simular delay se configurado
+    if (this.options.simulateDelayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, this.options.simulateDelayMs));
+    }
+
+    // Simular falha se configurado
+    if (this.options.simulateFailure) {
+      throw new Error('MockLLMProvider: Falha simulada para testes');
+    }
+
+    // Validação básica
+    if (!prompt || prompt.trim() === '') {
+      throw new Error('MockLLMProvider: Prompt não pode estar vazio');
+    }
+
+    // Gerar resposta mock
+    const content = this.options.customResponse
+      || `[MOCK] Análise do prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`;
+
+    // Simular contagem de tokens (aproximação simples)
+    const promptTokens = Math.ceil(prompt.length / 4);
+    const completionTokens = Math.ceil(content.length / 4);
+
+    const processingTimeMs = Date.now() - startTime;
+
+    return {
+      content,
+      usage: {
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+      },
+      model: 'mock-llm-v1',
+      processingTimeMs,
+      requestId: `mock_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+    };
+  }
+
+  getModelInfo(): ModelInfo {
+    return {
+      name: 'mock-llm',
+      provider: 'MockProvider',
+      version: 'v1.0',
+      maxContextTokens: 4096,
+      supportsStreaming: false,
+    };
+  }
+
+  isHealthy(): Promise<boolean> {
+    // Mock sempre está "saudável" a menos que configurado para falhar
+    if (this.options.simulateFailure) {
+      return Promise.reject(new Error('MockLLMProvider: Health check falhou (simulado)'));
+    }
+    return Promise.resolve(true);
+  }
+}
+EOF
+echo "[ok] MockLLMProvider.ts reescrito."
+
+echo "[info] Reescrevendo LLMProviderFactory.ts (versão corrigida)..."
+cat <<'EOF' > "${FACTORY_FILE}"
+/**
+ * @file LLMProviderFactory.ts
+ * @description Factory para criação de providers LLM
+ *
+ * Implementa padrão Factory para instanciar providers baseado em configuração,
+ * facilitando testes e permitindo troca de provider via variáveis de ambiente.
+ *
+ * @version 1.0.17
+ * @since 2024-11-15
+ */
+
+import type { ILLMProvider } from './ILLMProvider.js';
+import { MockLLMProvider, type MockProviderOptions } from './MockLLMProvider.js';
+import { DeepSeekProvider, type DeepSeekConfig } from './DeepSeekProvider.js';
+
+/**
+ * Tipos de providers suportados
+ */
+export type ProviderType = 'mock' | 'deepseek';
+
+/**
+ * Configuração para criação de provider via factory
+ */
+export interface ProviderFactoryConfig {
+  /**
+   * Tipo do provider a ser criado
+   */
+  type: ProviderType;
+
+  /**
+   * Configuração específica para MockProvider
+   */
+  mockOptions?: MockProviderOptions;
+
+  /**
+   * Configuração específica para DeepSeekProvider
+   */
+  deepseekConfig?: DeepSeekConfig;
+}
+
+/**
+ * Factory para criação de providers LLM
+ *
+ * Centraliza a lógica de instanciação de providers, permitindo:
+ * - Criação baseada em tipo configurável
+ * - Leitura automática de variáveis de ambiente
+ * - Facilita testes com mock
+ * - Suporta múltiplos providers
+ *
+ * @example
+ * ```typescript
+ * // Criar provider a partir de config
+ * const provider = LLMProviderFactory.create({
+ *   type: 'deepseek',
+ *   deepseekConfig: { apiKey: 'sk-...' }
+ * });
+ *
+ * // Criar provider a partir de env vars
+ * const provider = LLMProviderFactory.createFromEnv();
+ * ```
+ */
+export class LLMProviderFactory {
+  /**
+   * Cria um provider baseado em configuração explícita
+   *
+   * @param config - Configuração do provider
+   * @returns Instância do provider configurado
+   * @throws Error se configuração inválida ou faltando parâmetros obrigatórios
+   */
+  static create(config: ProviderFactoryConfig): ILLMProvider {
+    switch (config.type) {
+      case 'mock':
+        return new MockLLMProvider(config.mockOptions);
+
+      case 'deepseek': {
+        if (!config.deepseekConfig) {
+          throw new Error(
+            'LLMProviderFactory: deepseekConfig é obrigatória para type="deepseek"'
+          );
+        }
+        return new DeepSeekProvider(config.deepseekConfig);
+      }
+
+      default: {
+        const _exhaustive: never = config.type;
+        throw new Error('LLMProviderFactory: Tipo de provider desconhecido');
+      }
+    }
+  }
+
+  /**
+   * Cria um provider baseado em variáveis de ambiente
+   *
+   * Variáveis lidas:
+   * - LLM_PROVIDER_TYPE: 'mock' | 'deepseek' (default: 'mock')
+   * - DEEPSEEK_API_KEY: API key do DeepSeek (obrigatória se type=deepseek)
+   * - DEEPSEEK_MODEL: Modelo específico (opcional, default: 'deepseek-chat')
+   * - DEEPSEEK_BASE_URL: URL customizada (opcional)
+   *
+   * @returns Instância do provider configurado via env
+   * @throws Error se variáveis obrigatórias estiverem faltando
+   */
+  static createFromEnv(): ILLMProvider {
+    // CORRIGIDO: usar bracket notation para process.env
+    const providerType = (process.env['LLM_PROVIDER_TYPE'] || 'mock') as ProviderType;
+
+    switch (providerType) {
+      case 'mock':
+        return new MockLLMProvider({
+          simulateDelayMs: Number(process.env['MOCK_DELAY_MS']) || 0,
+        });
+
+      case 'deepseek': {
+        const apiKey = process.env['DEEPSEEK_API_KEY'];
+        if (!apiKey) {
+          throw new Error(
+            'LLMProviderFactory: DEEPSEEK_API_KEY não definida no ambiente. ' +
+            'Defina a variável ou use LLM_PROVIDER_TYPE=mock para testes.'
+          );
+        }
+
+        return new DeepSeekProvider({
+          apiKey,
+          model: process.env['DEEPSEEK_MODEL'],
+          baseUrl: process.env['DEEPSEEK_BASE_URL'],
+          defaultTimeoutMs: process.env['DEEPSEEK_TIMEOUT_MS']
+            ? Number(process.env['DEEPSEEK_TIMEOUT_MS'])
+            : undefined,
+        });
+      }
+
+      default: {
+        const invalidType = providerType as unknown as string;
+        throw new Error(
+          `LLMProviderFactory: LLM_PROVIDER_TYPE inválido: "${invalidType}". ` +
+          'Valores aceitos: "mock", "deepseek"'
+        );
+      }
+    }
+  }
+}
+EOF
+echo "[ok] LLMProviderFactory.ts reescrito."
+
+echo "[info] Rodando lint em @mini-ide/shared..."
+pnpm --filter @mini-ide/shared lint
+
+echo "[info] Rodando typecheck em @mini-ide/shared..."
+pnpm --filter @mini-ide/shared typecheck
+
+echo "[info] Rodando testes llm-provider em @mini-ide/shared..."
+pnpm --filter @mini-ide/shared test "llm-provider"
+
+echo "=========================================="
+echo "✅ Correção de lint dos providers LLM concluída com sucesso!"
+echo "=========================================="
+echo "[dica] Verifique o diff com:"
+echo "       git diff packages/shared/src/llm/ packages/shared/test/llm-provider.spec.ts || true"
