@@ -59,114 +59,113 @@ Na raiz do projeto:
 
 ```bash
 pnpm install
+```
 
 Sempre rode os comandos a partir da raiz do monorepo, a menos que indicado o contrário.
 
-3. Qualidade e código
-3.1 TypeScript + NodeNext
+---
+
+## 3. Qualidade e código
+
+### 3.1 TypeScript + NodeNext
 
 Projeto configurado para ESM/NodeNext.
 
-Imports no código-fonte usam paths TypeScript.
+- Imports no código-fonte usam paths TypeScript.  
+- No transpilado, terminam em `.js`.
 
-No transpilado, terminam em .js.
+Objetivo: manter código **fortemente tipado**:
 
-Objetivo: manter código fortemente tipado:
+- Evitar `any` desnecessário.  
+- Evitar `// @ts-ignore` e `// @ts-expect-error` (usar apenas em último caso e com comentário claro).
 
-Evitar any desnecessário.
-
-Evitar // @ts-ignore e // @ts-expect-error (usar apenas em último caso e com comentário claro).
-
-3.2 ESLint + Prettier + EditorConfig
+### 3.2 ESLint + Prettier + EditorConfig
 
 Estilo de código é padronizado por:
 
-ESLint (linting)
-
-Prettier (formatação)
-
-.editorconfig (indentação, fim de linha, charset etc.)
+- **ESLint** (linting)  
+- **Prettier** (formatação)  
+- **.editorconfig** (indentação, fim de linha, charset etc.)
 
 Comandos principais:
 
+```bash
 # Lint em todos os pacotes
 pnpm lint
 
 # Lint em um pacote específico
 pnpm --filter @mini-ide/server lint
+```
 
+Commits que quebram o lint **não devem** ser enviados. Husky + lint-staged ajudam a impedir isso.
 
-Commits que quebram o lint não devem ser enviados. Husky + lint-staged ajudam a impedir isso.
+---
 
-4. Testes automatizados
-4.1 Framework de testes
+## 4. Testes automatizados
 
-Testes em TypeScript usam Vitest.
+### 4.1 Framework de testes
 
-Cada pacote possui seus próprios testes, geralmente em packages/<nome>/test.
+Testes em TypeScript usam **Vitest**.
+
+Cada pacote possui seus próprios testes, geralmente em `packages/<nome>/test`.
 
 Comando geral:
 
+```bash
 # Todos os pacotes
 pnpm test
 
 # Pacote específico
 pnpm --filter @mini-ide/server test
+```
 
-4.2 Convenções
+### 4.2 Convenções
 
-Arquivos de teste: *.spec.ts.
+Arquivos de teste: `*.spec.ts`.
 
 Testes devem cobrir:
 
-Caminho feliz (happy path)
-
-Erros e validações
-
-Limites (boundary conditions)
+- Caminho feliz (happy path)  
+- Erros e validações  
+- Limites (boundary conditions)
 
 Sempre que criar ou alterar código “de verdade”:
 
-Crie/atualize os testes correspondentes.
-
-Garanta que o conjunto completo de testes siga verde.
+- Crie/atualize os testes correspondentes.  
+- Garanta que o conjunto completo de testes siga verde.
 
 Quando scripts Bash forem suficientemente complexos, pode-se adotar Bats para testá-los, mas isso ainda não é obrigatório.
 
-4.3 Cobertura de testes (Coverage)
+### 4.3 Cobertura de testes (Coverage)
 
-O projeto Mini-IDE utiliza thresholds mínimos de cobertura configurados no Vitest para garantir qualidade do código. Esses thresholds são realistas, baseados na cobertura atual, e serão elevados gradualmente em iterações futuras.
+O projeto Mini-IDE utiliza **thresholds mínimos de cobertura** configurados no Vitest para garantir qualidade do código. Esses thresholds são **realistas, baseados na cobertura atual**, e serão elevados gradualmente em iterações futuras.
 
-4.3.1 Thresholds configurados (baseline v1.0.17)
+#### 4.3.1 Thresholds configurados (baseline v1.0.17)
 
-Os thresholds são definidos por pacote nos respectivos vitest.config.ts.
+Os thresholds são definidos por pacote nos respectivos `vitest.config.ts`.
 
-@mini-ide/shared
+- **@mini-ide/shared**  
+  - `lines / functions / statements / branches`: **80%**
 
-lines / functions / statements / branches: 80%
+- **@mini-ide/ui**  
+  - `lines / functions / statements / branches`: **80%**
 
-@mini-ide/ui
+- **@mini-ide/server** (código crítico)  
+  - `lines / functions / statements`: **80%**  
+  - `branches`: **75%**
 
-lines / functions / statements / branches: 80%
+- **@mini-ide/cli**  
+  - `lines / functions / statements / branches`: **50%**
 
-@mini-ide/server (código crítico)
+- **@mini-ide/analysis-agent**  
+  - `lines / functions / statements / branches`: **10%**
 
-lines / functions / statements: 80%
+Esses valores são o **baseline atual**.  
+O plano é **aumentar progressivamente** até atingir patamares mais altos (por exemplo, server ≥ 90%, cli/analysis-agent ≥ 80%) por meio de HUs específicas de melhoria de cobertura.
 
-branches: 75%
+#### 4.3.2 Comandos para executar testes com cobertura
 
-@mini-ide/cli
-
-lines / functions / statements / branches: 50%
-
-@mini-ide/analysis-agent
-
-lines / functions / statements / branches: 10%
-
-Esses valores são o baseline atual.
-O plano é aumentar progressivamente até atingir patamares mais altos (por exemplo, server ≥ 90%, cli/analysis-agent ≥ 80%) por meio de HUs específicas de melhoria de cobertura.
-
-4.3.2 Comandos para executar testes com cobertura
+```bash
 # Executar testes com cobertura em todos os pacotes
 pnpm test -- --coverage
 
@@ -175,101 +174,112 @@ pnpm --filter @mini-ide/server test -- --coverage
 
 # Gerar relatório HTML e abrir no browser
 bash scripts/coverage-report.sh
+```
 
-4.3.3 Comportamento dos thresholds
+#### 4.3.3 Comportamento dos thresholds
 
-Se a cobertura ficar abaixo do threshold configurado, o comando pnpm test -- --coverage falha.
-
-Isso impede que commits reduzam a qualidade sem ação consciente.
+- Se a cobertura ficar **abaixo do threshold configurado**, o comando `pnpm test -- --coverage` **falha**.  
+- Isso impede que commits reduzam a qualidade sem ação consciente.
 
 Quando a cobertura estiver abaixo do valor desejado, o fluxo recomendado é:
 
-Passo 1 (preferencial): adicionar/ajustar testes até atingir o threshold.
+1. **Passo 1 (preferencial):** adicionar/ajustar testes até atingir o threshold.  
+2. **Passo 2 (exceção):** ajustar temporariamente o threshold no `vitest.config.ts` do pacote, registrando a justificativa na HU correspondente.
 
-Passo 2 (exceção): ajustar temporariamente o threshold no vitest.config.ts do pacote, registrando a justificativa na HU correspondente.
-
-4.3.4 Localização dos relatórios HTML de coverage
+#### 4.3.4 Localização dos relatórios HTML de coverage
 
 Após executar testes com coverage, os relatórios HTML são gerados em:
 
-packages/shared/coverage/index.html
+- `packages/shared/coverage/index.html`  
+- `packages/server/coverage/index.html`  
+- `packages/analysis-agent/coverage/index.html`  
+- `packages/cli/coverage/index.html`  
+- `packages/ui/coverage/index.html`
 
-packages/server/coverage/index.html
-
-packages/analysis-agent/coverage/index.html
-
-packages/cli/coverage/index.html
-
-packages/ui/coverage/index.html
-
-4.3.5 Status atual da cobertura (v1.0.17, pós HU-Quality-Coverage-Thresholds)
+#### 4.3.5 Status atual da cobertura (v1.0.17, pós HU-Quality-Coverage-Thresholds)
 
 Com base na última execução completa de coverage em v1.0.17:
 
-✅ shared: 100% (acima do threshold de 80%)
+- ✅ **shared:** 100% (acima do threshold de 80%)  
+- ✅ **ui:** 100% (acima do threshold de 80%)  
+- ✅ **server:** ~82.27% lines / ~75.6% branches (threshold 80% / 75%)  
+- ✅ **cli:** ~55% (acima do threshold de 50%)  
+- ✅ **analysis-agent:** ~12.5% (acima do threshold de 10%)
 
-✅ ui: 100% (acima do threshold de 80%)
+A partir deste baseline, novas HUs irão **elevar gradualmente** os thresholds por pacote até os valores-alvo definidos no backlog de qualidade.
 
-✅ server: ~82.27% lines / ~75.6% branches (threshold 80% / 75%)
+---
 
-✅ cli: ~55% (acima do threshold de 50%)
+## 5. Execução local (server + CLI)
 
-✅ analysis-agent: ~12.5% (acima do threshold de 10%)
+### 5.1 Build do servidor
 
-A partir deste baseline, novas HUs irão elevar gradualmente os thresholds por pacote até os valores-alvo definidos no backlog de qualidade.
-
-5. Execução local (server + CLI)
-5.1 Build do servidor
+```bash
 pnpm --filter @mini-ide/server build
+```
 
-5.2 Subir o servidor (porta 3200)
+### 5.2 Subir o servidor (porta 3200)
+
+```bash
 PORT=3200 node packages/server/dist/index.js
+```
 
+Health check disponível em:  
+`http://127.0.0.1:3200/healthz`
 
-Health check disponível em:
-http://127.0.0.1:3200/healthz
+Endpoint principal:  
+`POST http://127.0.0.1:3200/analyze`
 
-Endpoint principal:
-POST http://127.0.0.1:3200/analyze
+### 5.3 Build da CLI
 
-5.3 Build da CLI
+```bash
 pnpm --filter @mini-ide/cli build
+```
 
-5.4 Rodar a CLI apontando para o servidor local
+### 5.4 Rodar a CLI apontando para o servidor local
 
 Exemplo:
 
+```bash
 node packages/cli/dist/index.js analyze "Olá Mini-IDE!" --maxLen 10 --url http://127.0.0.1:3200
+```
 
+O resultado normalmente é persistido em `bundles/<versão>/...` (dependendo da configuração atual).
 
-O resultado normalmente é persistido em bundles/<versão>/... (dependendo da configuração atual).
+---
 
-5.5 Contrato oficial do endpoint POST /analyze
+### 5.5 Contrato oficial do endpoint POST /analyze
 
-Versão do contrato: 1.0.0
-Última atualização: 2024-11-16
-HU: HU-Server-Analyze-Shape-Contract
+**Versão do contrato:** 1.0.0  
+**Última atualização:** 2024-11-16  
+**HU:** HU-Server-Analyze-Shape-Contract
 
-O endpoint POST /analyze retorna um JSON estruturado que segue o contrato oficial definido em @mini-ide/shared/types/analyze-response.ts.
+O endpoint `POST /analyze` retorna um JSON estruturado que segue o contrato oficial definido em `@mini-ide/shared/types/analyze-response.ts`.
 
-5.5.1 Campos obrigatórios
+#### 5.5.1 Campos obrigatórios
 
 Todos os campos abaixo DEVEM estar presentes em toda resposta 2xx do endpoint:
 
-Campo	Tipo	Descrição
-summary	string	Resumo/saída principal da análise. Comprimento respeita o parâmetro maxLen da requisição.
-inputLength	number	Número de caracteres do texto de entrada (≥ 0).
-outputLength	number	Número de caracteres do resumo gerado (≥ 0).
-requestId	string	Identificador único da requisição (UUID v4). Usado para correlação de logs.
-timestamp	string	Timestamp ISO 8601 da geração da resposta (ex: 2024-11-16T14:30:00.000Z).
-5.5.2 Campos opcionais
+| Campo          | Tipo     | Descrição                                                                                     |
+| -------------- | -------- | --------------------------------------------------------------------------------------------- |
+| `summary`      | `string` | Resumo/saída principal da análise. Comprimento respeita o parâmetro `maxLen` da requisição.  |
+| `inputLength`  | `number` | Número de caracteres do texto de entrada (≥ 0).                                               |
+| `outputLength` | `number` | Número de caracteres do resumo gerado (≥ 0).                                                  |
+| `requestId`    | `string` | Identificador único da requisição (UUID v4). Usado para correlação de logs.                  |
+| `timestamp`    | `string` | Timestamp ISO 8601 da geração da resposta (ex: `2024-11-16T14:30:00.000Z`).                   |
+
+#### 5.5.2 Campos opcionais
 
 Estes campos podem ou não estar presentes:
 
-Campo	Tipo	Descrição
-budgetUsed	number	Quantidade de orçamento consumida nesta requisição (≥ 0).
-budgetRemaining	number	Quantidade de orçamento restante após esta requisição (≥ 0).
-5.5.3 Exemplo de resposta válida
+| Campo             | Tipo     | Descrição                                                     |
+| ----------------- | -------- | ------------------------------------------------------------- |
+| `budgetUsed`      | `number` | Quantidade de orçamento consumida nesta requisição (≥ 0).     |
+| `budgetRemaining` | `number` | Quantidade de orçamento restante após esta requisição (≥ 0).  |
+
+#### 5.5.3 Exemplo de resposta válida
+
+```json
 {
   "summary": "Este é um resumo de teste do sistema Mini-IDE",
   "inputLength": 150,
@@ -279,11 +289,13 @@ budgetRemaining	number	Quantidade de orçamento restante após esta requisição
   "budgetUsed": 0.05,
   "budgetRemaining": 4.95
 }
+```
 
-5.5.4 Validação programática
+#### 5.5.4 Validação programática
 
 Para validar se um objeto JavaScript corresponde ao contrato:
 
+```ts
 import { isAnalyzeResponse } from '@mini-ide/shared';
 
 const response = await fetch('http://127.0.0.1:3200/analyze', {
@@ -297,327 +309,292 @@ if (isAnalyzeResponse(response)) {
 } else {
   console.error('Resposta inválida - não respeita o contrato');
 }
+```
 
-5.5.5 Resiliência e versionamento
+#### 5.5.5 Resiliência e versionamento
 
-O contrato é resiliente a campos extras: respostas que contêm campos adicionais não documentados (ex: modelUsed, processingTime) continuam válidas. Isso permite evolução futura do endpoint sem quebrar consumidores existentes.
+O contrato é **resiliente a campos extras**: respostas que contêm campos adicionais não documentados (ex: `modelUsed`, `processingTime`) continuam válidas. Isso permite evolução futura do endpoint sem quebrar consumidores existentes.
 
 Ao adicionar novos campos obrigatórios no futuro, deve-se:
 
-Incrementar a versão do contrato.
+- Incrementar a versão do contrato.  
+- Manter compatibilidade retroativa por pelo menos **3 releases**.
 
-Manter compatibilidade retroativa por pelo menos 3 releases.
+---
 
-5.6 UI – Playground /analyze e status do servidor
+### 5.6 UI – Playground `/analyze` e status do servidor
 
 A UI da Mini-IDE já está conectada ao Mini-IDE Server com os seguintes recursos:
 
-5.6.1 Configuração de servidor
+#### 5.6.1 Configuração de servidor
 
-A URL base do backend é lida da variável de ambiente VITE_MINI_IDE_SERVER_URL.
+- A URL base do backend é lida da variável de ambiente `VITE_MINI_IDE_SERVER_URL`.  
+- O módulo `@mini-ide/ui/src/config/server.ts` centraliza:
 
-O módulo @mini-ide/ui/src/config/server.ts centraliza:
+  - `getBaseUrl()`  
+  - `getHealthzUrl()`  
+  - `getAnalyzeUrl()`
 
-getBaseUrl()
+#### 5.6.2 Indicador de status do servidor
 
-getHealthzUrl()
+- O componente `ServerStatus` consulta `GET /healthz`.  
+- Estados visuais:
 
-getAnalyzeUrl()
+  - 🟢 Servidor **online** (status 200 em `/healthz`)  
+  - 🔴 Servidor **indisponível** (erro de rede ou status não-2xx)  
+  - ⏳ **Verificando** (requisição em andamento)
 
-5.6.2 Indicador de status do servidor
+- Integrado ao header da aplicação, seguindo o padrão visual do wireframe da Mini-IDE.
 
-O componente ServerStatus consulta GET /healthz.
+#### 5.6.3 Playground do endpoint `POST /analyze`
 
-Estados visuais:
+- A aba **Analyze** do workspace contém o componente `AnalyzePlayground`.  
+- Permite enviar:
 
-🟢 Servidor online (status 200 em /healthz)
+  - `text`: texto livre para análise (**textarea**).  
+  - `maxLen`: tamanho máximo do resumo (**valor numérico**, padrão 100).
 
-🔴 Servidor indisponível (erro de rede ou status não-2xx)
+- A chamada é feita para `POST /analyze` usando a baseURL configurada.  
+- A resposta é exibida de forma estruturada:
 
-⏳ Verificando (requisição em andamento)
+  - `summary`  
+  - `inputLength`  
+  - `outputLength`  
+  - `requestId`  
+  - `timestamp`
 
-Integrado ao header da aplicação, seguindo o padrão visual do wireframe da Mini-IDE.
+- Em caso de erro, a UI exibe mensagens amigáveis, mantendo o usuário informado.
 
-5.6.3 Playground do endpoint POST /analyze
+> Esses recursos formam o **primeiro MVP de UI conectada ao backend**, permitindo testar o contrato oficial do `/analyze` diretamente pelo navegador.
 
-A aba Analyze do workspace contém o componente AnalyzePlayground.
+---
 
-Permite enviar:
-
-text: texto livre para análise (textarea).
-
-maxLen: tamanho máximo do resumo (valor numérico, padrão 100).
-
-A chamada é feita para POST /analyze usando a baseURL configurada.
-
-A resposta é exibida de forma estruturada:
-
-summary
-
-inputLength
-
-outputLength
-
-requestId
-
-timestamp
-
-Em caso de erro, a UI exibe mensagens amigáveis, mantendo o usuário informado.
-
-Esses recursos formam o primeiro MVP de UI conectada ao backend, permitindo testar o contrato oficial do /analyze diretamente pelo navegador.
-
-6. Pipeline local oficial
+## 6. Pipeline local oficial
 
 Antes de abrir PR (ou de considerar uma feature “pronta”), o fluxo recomendado é:
 
+```bash
 pnpm lint
 pnpm test
 pnpm typecheck
 pnpm build
-
+```
 
 Opcionalmente, use o script de checklist (se disponível na raiz):
 
+```bash
 # Pipeline completo
 REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh
-
+```
 
 Esse script costuma:
 
-Rodar lint em todos os pacotes relevantes.
+- Rodar lint em todos os pacotes relevantes.  
+- Executar testes.  
+- Executar typecheck.  
+- Fazer build dos pacotes.  
+- (Opcional) Rodar smoke tests.
 
-Executar testes.
+A flag `REQUIRE_GLOBAL_CLI=0` indica que o uso de uma CLI global é opcional; a validação deve funcionar com a CLI local do monorepo.
 
-Executar typecheck.
+---
 
-Fazer build dos pacotes.
+## 7. Smoke tests
 
-(Opcional) Rodar smoke tests.
+O repositório pode conter um script de smoke (por exemplo `scripts/smoke.sh`) com o seguinte objetivo:
 
-A flag REQUIRE_GLOBAL_CLI=0 indica que o uso de uma CLI global é opcional; a validação deve funcionar com a CLI local do monorepo.
+- Subir o server em `:3200`.  
+- Testar `/healthz`.  
+- Executar uma chamada CLI end-to-end.  
+- Finalizar o servidor, reportando `[ok] smoke passou` ou falha.
 
-7. Smoke tests
+Sempre que alterar algo em `@mini-ide/server` ou `@mini-ide/cli`, é recomendável:
 
-O repositório pode conter um script de smoke (por exemplo scripts/smoke.sh) com o seguinte objetivo:
-
-Subir o server em :3200.
-
-Testar /healthz.
-
-Executar uma chamada CLI end-to-end.
-
-Finalizar o servidor, reportando [ok] smoke passou ou falha.
-
-Sempre que alterar algo em @mini-ide/server ou @mini-ide/cli, é recomendável:
-
+```bash
 bash ./scripts/smoke.sh
-
+```
 
 (Ajustar o nome do script conforme o repo real.)
 
-8. Documentação
-8.1 TypeDoc
+---
 
-A API em TypeScript é documentada com TypeDoc.
+## 8. Documentação
 
-Saída esperada em docs/api/.
+### 8.1 TypeDoc
+
+A API em TypeScript é documentada com **TypeDoc**.
+
+Saída esperada em `docs/api/`.
 
 Para gerar a documentação:
 
+```bash
 pnpm docs:api   # ou o script equivalente definido no package.json
+```
 
-8.2 Controle de commits em docs/api/
+### 8.2 Controle de commits em `docs/api/`
 
-Por padrão, commits em docs/api/* devem ser evitados.
+Por padrão, commits em `docs/api/*` devem ser evitados.
 
 Quando for necessário atualizar a documentação gerada, use:
 
+```bash
 GIT_ALLOW_DOCS=1 git commit ...
-
+```
 
 Objetivo: manter o repositório limpo e evitar commits massivos apenas de HTML gerado.
 
-8.3 Arquivos que devem permanecer vivos
+### 8.3 Arquivos que devem permanecer vivos
 
 Documentos que precisam acompanhar a evolução do projeto:
 
-README.md – visão geral + Getting Started.
-
-CHANGELOG.md – histórico de releases.
-
-docs/HISTORIAS-USUARIO.md – backlog oficial de HUs.
-
-DEVELOPMENT.md – este documento.
-
-packages/server/openapi.yaml – contrato da API REST.
-
-docs/adr/*.md – decisões arquiteturais relevantes (quando existirem).
+- `README.md` – visão geral + Getting Started.  
+- `CHANGELOG.md` – histórico de releases.  
+- `docs/HISTORIAS-USUARIO.md` – backlog oficial de HUs.  
+- `DEVELOPMENT.md` – este documento.  
+- `packages/server/openapi.yaml` – contrato da API REST.  
+- `docs/adr/*.md` – decisões arquiteturais relevantes (quando existirem).
 
 Sempre que o comportamento ou a API mudar de forma relevante:
 
-Atualize o código.
+1. Atualize o código.  
+2. Atualize os testes.  
+3. Atualize também a documentação relacionada **no mesmo PR**.
 
-Atualize os testes.
+---
 
-Atualize também a documentação relacionada no mesmo PR.
+## 9. Git, branches e commits
 
-9. Git, branches e commits
-9.1 Branches
+### 9.1 Branches
 
-Branch principal: main.
+Branch principal: `main`.
 
 Recomenda-se criar branches de feature/bugfix:
 
-feat/<nome-descritivo>
+- `feat/<nome-descritivo>`  
+- `fix/<nome-descritivo>`  
+- `chore/<nome-descritivo>`
 
-fix/<nome-descritivo>
+### 9.2 Padrão de mensagens (Conventional Commits)
 
-chore/<nome-descritivo>
+Use mensagens no padrão **Conventional Commits**, por exemplo:
 
-9.2 Padrão de mensagens (Conventional Commits)
+- `feat(server): implementar tratamento 5xx em /analyze`  
+- `fix(cli): corrigir parse de argumentos`  
+- `chore(checklist): ajustar script 42_pipeline_checklist.sh`  
+- `docs(readme): documentar porta padrão 3200`  
+- `test(server): adicionar testes para budget`
 
-Use mensagens no padrão Conventional Commits, por exemplo:
+### 9.3 Husky e lint-staged
 
-feat(server): implementar tratamento 5xx em /analyze
-
-fix(cli): corrigir parse de argumentos
-
-chore(checklist): ajustar script 42_pipeline_checklist.sh
-
-docs(readme): documentar porta padrão 3200
-
-test(server): adicionar testes para budget
-
-9.3 Husky e lint-staged
-
-Husky é usado para garantir qualidade pré-commit.
-lint-staged roda lint e/ou outras verificações somente em arquivos alterados.
+Husky é usado para garantir qualidade pré-commit.  
+`lint-staged` roda lint e/ou outras verificações somente em arquivos alterados.
 
 Se o pre-commit falhar:
 
-Leia a mensagem de erro.
-
-Corrija o problema no código/testes.
-
-Refaça git add e git commit.
+1. Leia a mensagem de erro.  
+2. Corrija o problema no código/testes.  
+3. Refaça `git add` e `git commit`.
 
 Não force o commit “por fora” dos hooks – isso vai contra a cultura de qualidade do Mini-IDE.
 
-10. Scripts Bash e automação
+---
+
+## 10. Scripts Bash e automação
 
 Este projeto depende bastante de scripts Bash para:
 
-Rodar pipelines locais.
+- Rodar pipelines locais.  
+- Padronizar fluxos de build/test.  
+- Facilitar operações repetitivas.
 
-Padronizar fluxos de build/test.
+### 10.1 Quando criar um script Bash
 
-Facilitar operações repetitivas.
+Crie (ou atualize) um `.sh` quando:
 
-10.1 Quando criar um script Bash
+- Houver uma sequência de comandos de terminal que:
+  - Precise ser repetida com frequência, ou  
+  - Precise ser reproduzida de forma idêntica em diferentes máquinas, ou  
+  - For parte de um fluxo oficial (lint/test/typecheck/build, geração de docs, smoke, etc.).
 
-Crie (ou atualize) um .sh quando:
+Não há obrigatoriedade de “transformar todo código em script Bash”.  
+Objetivo: automatizar fluxos operacionais complexos, **não** substituir código TypeScript.
 
-Houver uma sequência de comandos de terminal que:
-
-Precise ser repetida com frequência, ou
-
-Precise ser reproduzida de forma idêntica em diferentes máquinas, ou
-
-For parte de um fluxo oficial (lint/test/typecheck/build, geração de docs, smoke, etc.).
-
-Não há obrigatoriedade de “transformar todo código em script Bash”.
-Objetivo: automatizar fluxos operacionais complexos, não substituir código TypeScript.
-
-10.2 Padrão de scripts Bash
+### 10.2 Padrão de scripts Bash
 
 Sempre que criar um novo script:
 
-Use shebang e flags de segurança:
+- Use shebang e flags de segurança:
 
-#!/usr/bin/env bash
-set -euo pipefail
+  ```bash
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ```
 
+- Inclua um cabeçalho no início com:
+  - Descrição do propósito do script.  
+  - Modo de uso (exemplos de execução).  
+  - Pré-requisitos.  
+  - Variáveis de ambiente relevantes.  
+  - Efeitos colaterais (arquivos gerados/alterados).
 
-Inclua um cabeçalho no início com:
+- Padronize logs de saída, por exemplo:
 
-Descrição do propósito do script.
+  ```bash
+  echo "[info] Iniciando build do server..."
+  echo "[ok] Build do server concluída."
+  echo "[warn] CLI global não encontrada, usando CLI local."
+  echo "[erro] Typecheck falhou, abortando."
+  ```
 
-Modo de uso (exemplos de execução).
+- Salve os scripts em:
+  - `scripts/` (scripts gerais)  
+  - `packages/<nome>/scripts/` (scripts específicos de um pacote)
 
-Pré-requisitos.
+---
 
-Variáveis de ambiente relevantes.
+## 11. O que ainda não é exigido (mas está no backlog)
 
-Efeitos colaterais (arquivos gerados/alterados).
+Alguns itens não são obrigatórios neste momento, mas já existem como HUs no backlog (especialmente no épico **E-Hardening**):
 
-Padronize logs de saída, por exemplo:
-
-echo "[info] Iniciando build do server..."
-echo "[ok] Build do server concluída."
-echo "[warn] CLI global não encontrada, usando CLI local."
-echo "[erro] Typecheck falhou, abortando."
-
-
-Salve os scripts em:
-
-scripts/ (scripts gerais)
-
-packages/<nome>/scripts/ (scripts específicos de um pacote)
-
-11. O que ainda não é exigido (mas está no backlog)
-
-Alguns itens não são obrigatórios neste momento, mas já existem como HUs no backlog (especialmente no épico E-Hardening):
-
-Testes E2E completos do fluxo Mini-IDE.
-
-Aprimoramento progressivo dos thresholds mínimos de cobertura já implementados (HU-Quality-Coverage-Thresholds, v1.0.17), elevando-os até os valores finais desejados por pacote.
-
-Abstração de provider LLM real (OpenAI, DeepSeek etc.), mantendo o mock para testes.
-
-Métricas de observabilidade (Prometheus, dashboards etc.).
+- Testes E2E completos do fluxo Mini-IDE.  
+- **Aprimoramento progressivo** dos thresholds mínimos de cobertura já implementados (HU-Quality-Coverage-Thresholds, v1.0.17), elevando-os até os valores finais desejados por pacote.  
+- Abstração de provider LLM real (OpenAI, DeepSeek etc.), mantendo o mock para testes.  
+- Métricas de observabilidade (Prometheus, dashboards etc.).
 
 Até essas HUs serem implementadas:
 
-Já existe gate de coverage com baseline realista; o aumento dos thresholds para níveis mais agressivos ainda não é exigido.
-
-Não há E2E obrigatório na pipeline de CI.
-
-O LLM pode continuar simulado no server.
-
-Logs estruturados já existem, mas sem métricas formais.
+- Já existe **gate de coverage** com baseline realista; o aumento dos thresholds para níveis mais agressivos ainda não é exigido.  
+- Não há E2E obrigatório na pipeline de CI.  
+- O LLM pode continuar simulado no server.  
+- Logs estruturados já existem, mas sem métricas formais.
 
 Conforme essas HUs forem sendo entregues:
 
-Este DEVELOPMENT.md deve ser atualizado para refletir:
+- Este `DEVELOPMENT.md` deve ser atualizado para refletir:
+  - Novos comandos necessários.  
+  - Novas regras de qualidade (ex.: coverage mínimo por pacote em novos patamares).  
+  - Novos requisitos (ex.: CI obrigatória em PR, execução de E2E na pipeline).
 
-Novos comandos necessários.
+---
 
-Novas regras de qualidade (ex.: coverage mínimo por pacote em novos patamares).
-
-Novos requisitos (ex.: CI obrigatória em PR, execução de E2E na pipeline).
-
-12. Integração com o Prompt-Mestre e Backlog de HUs
+## 12. Integração com o Prompt-Mestre e Backlog de HUs
 
 Os agentes de IA (Claude, DeepSeek, Analysis Agent etc.) seguem regras adicionais descritas em:
 
-Prompt-Mestre Mini-IDE (documento separado).
+- **Prompt-Mestre Mini-IDE** (documento separado).  
+- **Backlog de Histórias de Usuário** (`docs/HISTORIAS-USUARIO.md` ou equivalente).
 
-Backlog de Histórias de Usuário (docs/HISTORIAS-USUARIO.md ou equivalente).
+Este `DEVELOPMENT.md` deve ser entendido como:
 
-Este DEVELOPMENT.md deve ser entendido como:
-
-Manual de engenharia para qualquer desenvolvedor humano que queira:
-
-Clonar o repositório.
-
-Rodar o projeto localmente.
-
-Implementar HUs com segurança.
-
-Respeitar a cultura de qualidade do Mini-IDE.
+- Manual de engenharia para qualquer desenvolvedor humano que queira:
+  - Clonar o repositório.  
+  - Rodar o projeto localmente.  
+  - Implementar HUs com segurança.  
+  - Respeitar a cultura de qualidade do Mini-IDE.
 
 Sempre que houver dúvida entre o que está aqui e o que está no Prompt-Mestre:
 
-Para comportamento de IA → o Prompt-Mestre é a fonte oficial.
+- Para comportamento de IA → o **Prompt-Mestre** é a fonte oficial.  
+- Para estado técnico do repositório → este `DEVELOPMENT.md` deve ser mantido em linha com o código.
 
-Para estado técnico do repositório → este DEVELOPMENT.md deve ser mantido em linha com o código.
