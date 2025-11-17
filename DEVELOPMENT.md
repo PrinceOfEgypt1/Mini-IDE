@@ -249,6 +249,33 @@ O resultado normalmente é persistido em `bundles/<versão>/...` (dependendo da 
 
 ### 5.5 Contrato oficial do endpoint POST /analyze
 
+### 5.6 UI – Playground /analyze e status do servidor
+
+A UI da Mini-IDE já está conectada ao Mini-IDE Server com os seguintes recursos:
+
+- **Configuração de servidor**
+  - A URL base do backend é lida da variável de ambiente `VITE_MINI_IDE_SERVER_URL`.
+  - O módulo `@mini-ide/ui/src/config/server.ts` centraliza `getBaseUrl()`, `getHealthzUrl()` e `getAnalyzeUrl()`.
+
+- **Indicador de status do servidor**
+  - O componente `ServerStatus` consulta `GET /healthz`.
+  - Estados visuais:
+    - 🟢 Servidor online (200 em `/healthz`)
+    - 🔴 Servidor indisponível (erro de rede ou status não-2xx)
+    - ⏳ Verificando (requisição em andamento)
+  - Integrado ao header da aplicação, seguindo o padrão visual do wireframe da Mini-IDE.
+
+- **Playground do endpoint POST /analyze**
+  - A aba **Analyze** do workspace contém o componente `AnalyzePlayground`.
+  - Permite enviar:
+    - `text`: texto livre para análise (textarea).
+    - `maxLen`: tamanho máximo do resumo (valor numérico, padrão 100).
+  - A chamada é feita para `POST /analyze` usando a baseURL configurada.
+  - A resposta é exibida de forma estruturada (summary, inputLength, outputLength, requestId, timestamp) ou como mensagem de erro amigável em caso de falha.
+
+Esses recursos formam o primeiro MVP de UI conectada ao backend, permitindo testar o contrato oficial do `/analyze` diretamente pelo navegador.
+
+
 **Versão do contrato:** 1.0.0  
 **Última atualização:** 2024-11-16  
 **HU:** HU-Server-Analyze-Shape-Contract
@@ -544,29 +571,4 @@ Sempre que houver dúvida entre o que está aqui e o que está no Prompt-Mestre:
 
 - Para comportamento de IA → o **Prompt-Mestre** é a fonte oficial.
 - Para estado técnico do repositório → este `DEVELOPMENT.md` deve ser mantido em linha com o código.
-
-  5.6 UI – Playground /analyze e status do servidor
-
-A UI da Mini-IDE já está conectada ao Mini-IDE Server, com os seguintes recursos:
-
-- Configuração de servidor
-  - A URL base do backend é lida da variável de ambiente `VITE_MINI_IDE_SERVER_URL`.
-  - O módulo `@mini-ide/ui/src/config/server.ts` centraliza `getBaseUrl()`, `getHealthzUrl()` e `getAnalyzeUrl()`.
-
-- Indicador de status do servidor
-  - O componente `ServerStatus` consulta `GET /healthz`.
-  - Estados visuais:
-    - 🟢 Servidor online (200 em /healthz)
-    - 🔴 Servidor indisponível (erro de rede ou status não-2xx)
-    - ⏳ Verificando (requisição em andamento)
-  - Integrado ao header da aplicação, seguindo o padrão visual do wireframe da Mini-IDE.
-
-- Playground do endpoint POST /analyze
-  - A aba **Analyze** do workspace contém o componente `AnalyzePlayground`.
-  - Permite enviar:
-    - `text`: texto livre para análise (textarea)
-    - `maxLen`: tamanho máximo do resumo (valor numérico, default 100)
-  - A chamada é feita para `POST /analyze` usando a baseURL configurada.
-  - A resposta é exibida de forma estruturada (summary, inputLength, outputLength, requestId, timestamp) ou como mensagem de erro amigável em caso de falha.
-
-Esses recursos formam o primeiro MVP de UI conectada ao backend, permitindo testar o contrato oficial do /analyze diretamente pelo navegador.
+ 
