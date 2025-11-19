@@ -1,649 +1,439 @@
-# Guia de Desenvolvimento – Mini-IDE
+# Mini-IDE — DEVELOPMENT.md (v1.0.18 – Lote 3 UI Explore Workspace)
 
-> **Versão do documento:** v1.0.17  
-> **Última atualização:** (ajustar ao atualizar o repo)  
-> **Escopo:** este arquivo consolida as regras de desenvolvimento, comandos principais e decisões técnicas **para humanos**.
->
-> O comportamento dos agentes de IA (Analysis Agent, Claude, DeepSeek etc.) é definido no **Prompt-Mestre Mini-IDE** e no **backlog de HUs**.
-
-Este guia segue três princípios:
-
-1. **Mínimo necessário:** nada de documentação inflada.
-2. **Vivo:** sempre que o estado real do projeto mudar, este arquivo deve ser atualizado no mesmo PR.
-3. **Aderente ao código:** o que está escrito aqui precisa bater com o que o repositório realmente faz.
+> **Estado de referência deste documento**  
+> Versão lógica: v1.0.18 (Lote 3 de UI – Explore Workspace)  
+> Pipeline: `42_pipeline_checklist.sh` passando (lint, test, typecheck, build, smoke /healthz e /analyze).
 
 ---
 
 ## 1. Visão geral do projeto
 
-O **Mini-IDE** é um monorepo TypeScript que orquestra um fluxo de desenvolvimento “industrializado” apoiado por agentes de IA.
+O **Mini-IDE** é um monorepo TypeScript baseado em **pnpm workspaces**, cujo objetivo é fornecer um ambiente de análise e orquestração de código, apoiado por múltiplos agentes de IA (Analysis Agent, etc.) e por um usuário humano que atua como supervisor.
 
-### 1.1 Monorepo e pacotes
+A UI principal expõe um **Explore Workspace** em três colunas, alinhado ao wireframe oficial `MiniIDE-Explore.html`, funcionando como cockpit para:
 
-O projeto usa **pnpm workspaces**. Os pacotes principais são:
+- **Explorar contexto** (projeto atual, HUs, docs, timeline);
+- **Acionar o backend** via `/healthz` e `/analyze`;
+- **Registrar intenção, requisitos, restrições e referências** (Discovery Notes);
+- **Visualizar eventos** da sessão (Timeline de Exploração).
 
-- `@mini-ide/shared` – Tipos e utilitários compartilhados.
-- `@mini-ide/analysis-agent` – Lógica do Analysis Agent (entrada única).
-- `@mini-ide/server` – API HTTP (Fastify) para `/healthz` e `/analyze`.
-- `@mini-ide/ui` – Interface de usuário (futuro painel Mini-IDE).
-- `@mini-ide/cli` – CLI local para disparar análises e consumir o servidor.
-
-Porta padrão do servidor: **`http://127.0.0.1:3200`**.
-
-### 1.2 O que este documento **não** cobre
-
-- Detalhes de negócio de projetos que o Mini-IDE venha a orquestrar.
-- Padrão completo de Histórias de Usuário (HU) – isso está no **Backlog de HUs**.
-- Fluxo detalhado das 8 personas de IA – isso está no **Prompt-Mestre Mini-IDE**.
-
-Aqui o foco é: **como desenvolver com segurança dentro deste repositório**.
+Este documento foca nos aspectos de desenvolvimento e integração, especialmente da camada **@mini-ide/ui** com **@mini-ide/server**.
 
 ---
 
-## 2. Ambiente de desenvolvimento
+## 2. Estrutura de workspaces (monorepo)
 
-### 2.1 Pré-requisitos
+Monorepo gerido por **pnpm** com os workspaces principais:
 
-- **Node.js 20+**
-- **pnpm** (gerenciador de pacotes)
-- **git**
+- `packages/analysis-agent`  
+  Orquestração de análise e integração com LLMs, responsável por coordenar chamadas ao servidor e interpretar respostas.
 
-Ferramentas recomendadas:
+- `packages/server` (`@mini-ide/server`)  
+  Servidor HTTP (Fastify) com endpoints principais:
+  - `GET /healthz` — health check;
+  - `POST /analyze` — endpoint de análise, contrato tipado em `@mini-ide/shared`.
 
-- VS Code (ou outro editor com suporte a TypeScript/ESLint/Prettier)
-- `curl`/`wget` para chamadas HTTP de teste
+- `packages/shared` (`@mini-ide/shared`)  
+  Tipos compartilhados, incluindo:
+  - Contrato da resposta de `/analyze`;
+  - Tipos utilitários de provider LLM e configuração.
 
-### 2.2 Instalação
+- `packages/ui` (`@mini-ide/ui`)  
+  Frontend em React + Vite, responsável por renderizar o **Explore Workspace** e integrar-se aos endpoints do servidor.
 
-Na raiz do projeto:
+- `packages/cli` (`@mini-ide/cli`)  
+  Ferramentas de linha de comando para interação com o Mini-IDE via terminal.
 
-```bash
-pnpm install
-```
+Scripts globais relevantes na raiz:
 
-Sempre rode os comandos a partir da raiz do monorepo, a menos que indicado o contrário.
-
----
-
-## 3. Qualidade e código
-
-### 3.1 TypeScript + NodeNext
-
-Projeto configurado para ESM/NodeNext.
-
-- Imports no código-fonte usam paths TypeScript.
-- No transpilado, terminam em `.js`.
-
-O objetivo é manter código fortemente tipado:
-
-- Evitar `any` desnecessário.
-- Evitar `// @ts-ignore` e `// @ts-expect-error` (usar apenas em último caso e com comentário claro).
-
-### 3.2 ESLint + Prettier + EditorConfig
-
-Estilo de código é padronizado por:
-
-- **ESLint** (linting)
-- **Prettier** (formatação)
-- **.editorconfig** (indentação, fim de linha, charset etc.)
-
-Comandos principais:
-
-```bash
-# Lint em todos os pacotes
-pnpm lint
-
-# Lint em um pacote específico
-pnpm --filter @mini-ide/server lint
-```
-
-Commits que quebram o lint **não devem** ser enviados. Husky + lint-staged ajudam a impedir isso.
+- `42_pipeline_checklist.sh` — pipeline completa (lint, typecheck, test, build, smoke /healthz e /analyze);
+- Scripts numerados (`0x_*.sh`, `1x_*.sh`, etc.) — automações de diagnóstico e correção incremental.
 
 ---
 
-## 4. Testes automatizados
+## 3. Tooling e padrões de qualidade
 
-### 4.1 Framework de testes
+- **Gerenciador de pacotes:** `pnpm`  
+- **Lint:** `eslint` com configuração por pacote (incluindo `packages/ui/eslint.config.js`).  
+- **Testes:** `vitest` com `jsdom` para testes de UI.  
+- **Build UI:** `vite build` via script `@mini-ide/ui: build`.  
+- **Type-check:** `tsc --noEmit` por pacote.  
+- **Husky / pre-commit:** hooks garantindo que commits passem pelos checks mínimos (lint, typecheck filtrado).
 
-Testes em TypeScript usam **Vitest**.
-
-Cada pacote possui seus próprios testes, geralmente em `packages/<nome>/test`.
-
-Comando geral:
-
-```bash
-# Todos os pacotes
-pnpm test
-
-# Pacote específico
-pnpm --filter @mini-ide/server test
-```
-
-### 4.2 Convenções
-
-Arquivos de teste: `*.spec.ts`.
-
-Testes devem cobrir:
-
-- Caminho feliz (happy path)
-- Erros e validações
-- Limites (boundary conditions)
-
-Sempre que criar ou alterar código “de verdade”:
-
-- Crie/atualize os testes correspondentes.
-- Garanta que o conjunto completo de testes siga verde.
-
-Quando scripts Bash forem suficientemente complexos, pode-se adotar Bats para testá-los, mas isso ainda não é obrigatório.
-
-### 4.3 Cobertura de testes (Coverage)
-
-O projeto Mini-IDE utiliza **thresholds mínimos de cobertura** configurados no Vitest para garantir qualidade do código. Esses thresholds são **realistas, baseados na cobertura atual**, e serão elevados gradualmente em iterações futuras.
-
-#### 4.3.1 Thresholds configurados (baseline v1.0.17)
-
-Os thresholds são definidos por pacote nos respectivos `vitest.config.ts`.
-
-- **@mini-ide/shared**
-  - `lines / functions / statements / branches`: **80%**
-
-- **@mini-ide/ui**
-  - `lines / functions / statements / branches`: **80%**
-
-- **@mini-ide/server** (código crítico)
-  - `lines / functions / statements`: **80%**
-  - `branches`: **75%**
-
-- **@mini-ide/cli**
-  - `lines / functions / statements / branches`: **50%**
-
-- **@mini-ide/analysis-agent**
-  - `lines / functions / statements / branches`: **10%**
-
-Esses valores são o **baseline atual**. O plano é **aumentar progressivamente** até atingir patamares mais altos (por exemplo, server ≥ 90%, cli/analysis-agent ≥ 80%) por meio de HUs específicas de melhoria de cobertura.
-
-#### 4.3.2 Comandos para executar testes com cobertura
+O pipeline de validação recomendado:
 
 ```bash
-# Executar testes com cobertura em todos os pacotes
-pnpm test -- --coverage
-
-# Executar cobertura em um pacote específico
-pnpm --filter @mini-ide/server test -- --coverage
-
-# Gerar relatório HTML e abrir no browser
-bash scripts/coverage-report.sh
-```
-
-#### 4.3.3 Comportamento dos thresholds
-
-- Se a cobertura ficar **abaixo do threshold configurado**, o comando `pnpm test -- --coverage` **falha**.
-- Isso impede que commits reduzam a qualidade sem ação consciente.
-
-Quando a cobertura estiver abaixo do valor desejado, o fluxo recomendado é:
-
-1. **Passo 1 (preferencial):** adicionar/ajustar testes até atingir o threshold.
-2. **Passo 2 (exceção):** ajustar temporariamente o threshold no `vitest.config.ts` do pacote, registrando a justificativa na HU correspondente.
-
-#### 4.3.4 Localização dos relatórios HTML de coverage
-
-Após executar testes com coverage, os relatórios HTML são gerados em:
-
-- `packages/shared/coverage/index.html`
-- `packages/server/coverage/index.html`
-- `packages/analysis-agent/coverage/index.html`
-- `packages/cli/coverage/index.html`
-- `packages/ui/coverage/index.html`
-
-#### 4.3.5 Status atual da cobertura (v1.0.17, pós HU-Quality-Coverage-Thresholds)
-
-Com base na última execução completa de coverage em v1.0.17:
-
-- ✅ **shared:** 100% (acima do threshold de 80%)
-- ✅ **ui:** 100% (acima do threshold de 80%)
-- ✅ **server:** ~82.27% lines / ~75.6% branches (threshold 80% / 75%)
-- ✅ **cli:** ~55% (acima do threshold de 50%)
-- ✅ **analysis-agent:** ~12.5% (acima do threshold de 10%)
-
-A partir deste baseline, novas HUs irão **elevar gradualmente** os thresholds por pacote até os valores-alvo definidos no backlog de qualidade.
-
----
-
-## 5. Execução local (server + CLI)
-
-### 5.1 Build do servidor
-
-```bash
-pnpm --filter @mini-ide/server build
-```
-
-### 5.2 Subir o servidor (porta 3200)
-
-```bash
-PORT=3200 node packages/server/dist/index.js
-```
-
-Health check disponível em:  
-`http://127.0.0.1:3200/healthz`
-
-Endpoint principal:  
-`POST http://127.0.0.1:3200/analyze`
-
-### 5.3 Build da CLI
-
-```bash
-pnpm --filter @mini-ide/cli build
-```
-
-### 5.4 Rodar a CLI apontando para o servidor local
-
-Exemplo:
-
-```bash
-node packages/cli/dist/index.js analyze "Olá Mini-IDE!" --maxLen 10   --url http://127.0.0.1:3200
-```
-
-O resultado normalmente é persistido em `bundles/<versão>/...` (dependendo da configuração atual).
-
----
-
-### 5.5 Contrato oficial do endpoint POST /analyze
-
-**Versão do contrato:** 1.0.0  
-**Última atualização:** 2024-11-16  
-**HU:** HU-Server-Analyze-Shape-Contract
-
-O endpoint `POST /analyze` retorna um JSON estruturado que segue o contrato oficial definido em `@mini-ide/shared/types/analyze-response.ts`.
-
-#### Campos obrigatórios
-
-Todos os campos abaixo DEVEM estar presentes em toda resposta 2xx do endpoint:
-
-| Campo          | Tipo     | Descrição                                                                                   |
-| -------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `summary`      | `string` | Resumo/saída principal da análise. Comprimento respeita o parâmetro `maxLen` da requisição. |
-| `inputLength`  | `number` | Número de caracteres do texto de entrada (≥ 0).                                             |
-| `outputLength` | `number` | Número de caracteres do resumo gerado (≥ 0).                                                |
-| `requestId`    | `string` | Identificador único da requisição (UUID v4). Usado para correlação de logs.                 |
-| `timestamp`    | `string` | Timestamp ISO 8601 da geração da resposta (ex: `2024-11-16T14:30:00.000Z`).                 |
-
-#### Campos opcionais
-
-Estes campos podem ou não estar presentes:
-
-| Campo             | Tipo     | Descrição                                                    |
-| ----------------- | -------- | ------------------------------------------------------------ |
-| `budgetUsed`      | `number` | Quantidade de orçamento consumida nesta requisição (≥ 0).    |
-| `budgetRemaining` | `number` | Quantidade de orçamento restante após esta requisição (≥ 0). |
-
-#### Exemplo de resposta válida
-
-```json
-{
-  "summary": "Este é um resumo de teste do sistema Mini-IDE",
-  "inputLength": 150,
-  "outputLength": 47,
-  "requestId": "a1b2c3d4-e5f6-4789-a012-3456789abcde",
-  "timestamp": "2024-11-16T14:30:00.000Z",
-  "budgetUsed": 0.05,
-  "budgetRemaining": 4.95
-}
-```
-
-#### Validação programática
-
-Para validar se um objeto JavaScript corresponde ao contrato:
-
-```typescript
-import { isAnalyzeResponse } from '@mini-ide/shared';
-
-const response = await fetch('http://127.0.0.1:3200/analyze', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ text: 'Teste', maxLen: 100 }),
-}).then((r) => r.json());
-
-if (isAnalyzeResponse(response)) {
-  console.log('Resposta válida:', response.summary);
-} else {
-  console.error('Resposta inválida - não respeita o contrato');
-}
-```
-
-#### Resiliência e versionamento
-
-O contrato é **resiliente a campos extras**: respostas que contêm campos adicionais não documentados (ex: `modelUsed`, `processingTime`) continuam válidas. Isso permite evolução futura do endpoint sem quebrar consumidores existentes.
-
-Ao adicionar novos campos obrigatórios no futuro, deve-se incrementar a versão do contrato e manter compatibilidade retroativa por pelo menos 3 releases.
-
----
-
-### 5.6 UI – Playground /analyze e status do servidor
-
-A UI da Mini-IDE já está conectada ao Mini-IDE Server com os seguintes recursos:
-
-- **Configuração de servidor**
-  - A URL base do backend é lida da variável de ambiente `VITE_MINI_IDE_SERVER_URL`.
-  - O módulo `@mini-ide/ui/src/config/server.ts` centraliza `getBaseUrl()`, `getHealthzUrl()` e `getAnalyzeUrl()`.
-
-- **Indicador de status do servidor**
-  - O componente `ServerStatus` consulta `GET /healthz`.
-  - Estados visuais:
-    - 🟢 Servidor online (200 em `/healthz`)
-    - 🔴 Servidor indisponível (erro de rede ou status não-2xx)
-    - ⏳ Verificando (requisição em andamento)
-  - Integrado ao header da aplicação, seguindo o padrão visual do wireframe da Mini-IDE.
-
-- **Playground do endpoint POST /analyze**
-  - A aba **Analyze** do workspace contém o componente `AnalyzePlayground`.
-  - Permite enviar:
-    - `text`: texto livre para análise (textarea).
-    - `maxLen`: tamanho máximo do resumo (valor numérico, padrão 100).
-  - A chamada é feita para `POST /analyze` usando a baseURL configurada.
-  - A resposta é exibida de forma estruturada (summary, inputLength, outputLength, requestId, timestamp) ou como mensagem de erro amigável em caso de falha.
-
-Esses recursos formam o primeiro MVP de UI conectada ao backend, permitindo testar o contrato oficial do `/analyze` diretamente pelo navegador.
-
----
-
-### 5.6.5 Governança da UI (Explore Workspace) - v1.0.17
-
-**Wireframe Oficial:** `MiniIDE-Explore.html`
-
-#### Estrutura Imutável
-
-O layout base do Explore Workspace é **IMUTÁVEL** e deve ser respeitado por todas as HUs de UI, salvo HU específica de redesign:
-
-**Layout de 3 Colunas:**
-- **Sidebar Esquerda** (280px): Projeto Atual, árvore de arquivos, status
-- **Painel Central** (expansível): 10 abas internas (Overview, HUs, Docs, Testes, Analyze, Personas & Plano, Timeline, Runs, Métricas, Outputs)
-- **Painel Direito** (360px): Discovery Notes (Intenção, Requisitos, Restrições, Exemplos & Referências)
-- **Footer**: Chat com textarea + botões Anexar/Enviar
-
-#### Regras Obrigatórias para HUs de UI
-
-1. **Wireframe como fonte de verdade visual**
-   - Todo desenvolvimento de UI DEVE consultar `MiniIDE-Explore.html`
-   - Desvios do wireframe só são permitidos com HU específica de redesign
-
-2. **Layout de 3 colunas é obrigatório**
-   - Novas funcionalidades devem ser integradas DENTRO do layout existente
-   - Não é permitido remover/substituir painéis ou abas sem HU específica
-
-3. **Abas internas do painel central (10 abas)**
-   - Overview, HUs, Docs, Testes, Analyze, Personas & Plano, Timeline, Runs, Métricas, Outputs
-   - Novas abas só podem ser adicionadas com HU específica
-
-4. **Documentação de impacto**
-   - Toda HU de UI deve incluir seção "Impacto na UI vs Wireframe"
-   - Especificar: o que permanece, o que é novo, o que diverge (com justificativa)
-
-#### Componentes Base (v1.0.17)
-
-**Estrutura:**
-```text
-packages/ui/src/
-├── App.tsx                    - Layout 3 colunas (header + main + footer)
-├── App.module.css             - Estilos do wireframe
-├── components/
-│   ├── Sidebar.tsx            - Coluna esquerda (projeto + árvore)
-│   ├── WorkspaceTabs.tsx      - Abas internas do painel central
-│   ├── DiscoveryNotes.tsx     - Coluna direita (notas de descoberta)
-│   ├── ServerStatus.tsx       - Indicador de servidor (aba Analyze)
-│   └── AnalyzePlayground.tsx  - Playground do /analyze (aba Analyze)
-```
-
-**Responsividade:**
-- Desktop (>1200px): 3 colunas visíveis
-- Tablet (900px-1200px): 3 colunas com larguras ajustadas
-- Mobile (<900px): 1 coluna, painéis colapsáveis
-
-#### HU de Correção: HU-UI-Fix-Align-Wireframe-Explore
-
-**Problema Corrigido:** A HU-UI-Tabs-004 havia destruído o layout base ao criar abas em tela cheia que substituíram (incorretamente) a estrutura de 3 colunas.
-
-**Solução Aplicada:**
-- Restauração completa do wireframe MiniIDE-Explore.html
-- Sidebar, WorkspaceTabs e DiscoveryNotes criados do zero
-- ServerStatus e AnalyzePlayground integrados na aba "Analyze"
-- Componentes obsoletos movidos para `deprecated/` e posteriormente removidos
-
-**Scripts Aplicados:**
-- `19_fix_ui_align_wireframe.sh` - Restauração do wireframe
-- `20_fix_app_test_button_query.sh` - Correção de testes ambíguos
-- `21_remove_deprecated_components.sh` - Limpeza de componentes obsoletos
-- `23_validate_complete_pipeline.sh` - Validação final
-
-**Resultado:** 152 testes passando, pipeline 100% verde, wireframe restaurado.
-
----
-
-## 6. Pipeline local oficial
-
-Antes de abrir PR (ou de considerar uma feature “pronta”), o fluxo recomendado é:
-
-```bash
-pnpm lint
-pnpm test
-pnpm typecheck
-pnpm build
-```
-
-Opcionalmente, use o script de checklist (se disponível na raiz):
-
-```bash
-# Pipeline completo
 REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh
 ```
 
-Esse script costuma:
+Que executa, nesta ordem:
 
-- Rodar lint em todos os pacotes relevantes.
-- Executar testes.
-- Executar typecheck.
-- Fazer build dos pacotes.
-- (Opcional) Rodar smoke tests.
-
-A flag `REQUIRE_GLOBAL_CLI=0` indica que o uso de uma CLI global é opcional; a validação deve funcionar com a CLI local do monorepo.
-
----
-
-## 7. Smoke tests
-
-O repositório pode conter um script de smoke (por exemplo `scripts/smoke.sh`) com o seguinte objetivo:
-
-- Subir o server em `:3200`.
-- Testar `/healthz`.
-- Executar uma chamada CLI end-to-end.
-- Finalizar o servidor, reportando `[ok] smoke passou` ou falha.
-
-Sempre que alterar algo em `@mini-ide/server` ou `@mini-ide/cli`, é recomendável:
-
-```bash
-bash ./scripts/smoke.sh
-```
-
-(ajustar o nome do script conforme o repo real).
+1. `pnpm lint`
+2. `pnpm typecheck`
+3. `pnpm test`
+4. `pnpm build`
+5. Smoke test `GET /healthz`
+6. Smoke test `POST /analyze` com validação de contrato.
 
 ---
 
-## 8. Documentação
+## 4. Backend HTTP — @mini-ide/server (resumo)
 
-### 8.1 TypeDoc
+### 4.1 Endpoint GET /healthz
 
-A API em TypeScript é documentada com **TypeDoc**.
+- Retorna 200 quando o servidor está saudável.  
+- Usado pela UI (ServerStatus) para exibir estado:  
+  - ⏳ verificando;  
+  - 🟢 servidor online;  
+  - 🔴 servidor indisponível.
 
-Saída esperada em `docs/api/`.
+### 4.2 Endpoint POST /analyze
 
-Para gerar a documentação:
+- Contrato tipado em `@mini-ide/shared/types/analyze-response.ts`.
+- Campos **obrigatórios** na resposta:
+  - `summary: string`
+  - `inputLength: number`
+  - `outputLength: number`
+  - `requestId: string`
+  - `timestamp: string` (ISO 8601)
+- Campos **opcionais**:
+  - `budgetUsed?: number`
+  - `budgetRemaining?: number`
 
-```bash
-pnpm docs:api   # ou o script equivalente definido no package.json
-```
-
-### 8.2 Controle de commits em `docs/api/`
-
-Por padrão, commits em `docs/api/*` devem ser evitados.
-
-Quando for necessário atualizar a documentação gerada, use:
-
-```bash
-GIT_ALLOW_DOCS=1 git commit ...
-```
-
-O objetivo é manter o repositório limpo e evitar commits massivos apenas de HTML gerado.
-
-### 8.3 Arquivos que devem permanecer vivos
-
-Documentos que precisam acompanhar a evolução do projeto:
-
-- `README.md` – visão geral + Getting Started.
-- `CHANGELOG.md` – histórico de releases.
-- `docs/HISTORIAS-USUARIO.md` – backlog oficial de HUs.
-- `DEVELOPMENT.md` – este documento.
-- `packages/server/openapi.yaml` – contrato da API REST.
-- `docs/adr/*.md` – decisões arquiteturais relevantes (quando existirem).
-
-Sempre que o comportamento ou a API mudar de forma relevante:
-
-1. Atualize o código.
-2. Atualize os testes.
-3. Atualize também a documentação relacionada no mesmo PR.
+A UI consome esse contrato via `AnalyzePlayground`, exibindo a resposta de forma estruturada.
 
 ---
 
-## 9. Git, branches e commits
+## 5. UI — @mini-ide/ui
 
-### 9.1 Branches
+### 5.1 Stack e entrypoint
 
-Branch principal: `main`.
+- React + TypeScript;
+- Build com Vite (`packages/ui/vite.config.ts`);
+- Entry principal em `packages/ui/src/main.tsx` + `App.tsx`;
+- Estilos globais em `packages/ui/src/styles/global.css`.
 
-Recomenda-se criar branches de feature/bugfix:
+Configuração do backend na UI:
 
-- `feat/<nome-descritivo>`
-- `fix/<nome-descritivo>`
-- `chore/<nome-descritivo>`
+- Arquivo: `packages/ui/src/config/server.ts`  
+- Usa a env `VITE_MINI_IDE_SERVER_URL` como base para:
+  - `getBaseUrl()`
+  - `getHealthzUrl()`
+  - `getAnalyzeUrl()`
 
-### 9.2 Padrão de mensagens (Conventional Commits)
+### 5.2 Explore Workspace — layout em 3 colunas
 
-Use mensagens no padrão **Conventional Commits**, por exemplo:
+O layout do Explore Workspace segue **estritamente** o wireframe oficial `MiniIDE-Explore.html` e as regras estabelecidas na governança da UI:
 
-- `feat(server): implementar tratamento 5xx em /analyze`
-- `fix(cli): corrigir parse de argumentos`
-- `chore(checklist): ajustar script 42_pipeline_checklist.sh`
-- `docs(readme): documentar porta padrão 3200`
-- `test(server): adicionar testes para budget`
+- **Coluna esquerda (~280px)** — `Sidebar`  
+  - Projeto atual (nome, repo, branch);  
+  - Árvore de arquivos (placeholder para evolução futura);  
+  - Status do projeto / sessão.
 
-### 9.3 Husky e lint-staged
+- **Coluna central (expansível)** — `WorkspaceTabs`  
+  - 10 abas internas:
+    1. Overview  
+    2. HUs  
+    3. Docs  
+    4. Testes  
+    5. Analyze  
+    6. Personas & Plano  
+    7. Timeline  
+    8. Runs  
+    9. Métricas  
+    10. Outputs
 
-Husky é usado para garantir qualidade pré-commit.  
-`lint-staged` roda lint e/ou outras verificações somente em arquivos alterados.
+- **Coluna direita (~360px)** — `DiscoveryNotes`  
+  - Intenção;  
+  - Requisitos;  
+  - Restrições;  
+  - Exemplos & Referências.
 
-Se o pre-commit falhar:
+Header e footer:
 
-1. Leia a mensagem de erro.
-2. Corrija o problema no código/testes.
-3. Refaça `git add` e `git commit`.
+- **Header**: título da Mini-IDE, contexto da sessão, badges de agente (ex.: *Analysis Agent*), estado de exploração.  
+- **Footer**: área de chat (textarea) + botões de ação (Anexar, Enviar, etc.).
 
-Não force o commit “por fora” dos hooks – isso vai contra a cultura de qualidade do Mini-IDE.
+### 5.3 Governança da UI — Explore Workspace (seção 5.6.5 lógica)
+
+Regras imutáveis de governança visual e estrutural:
+
+1. **Layout de 3 colunas é fixo**  
+   - Não é permitido substituir o layout por modo “tela cheia” ou “multi-layout” sem HU explícita de redesign.
+
+2. **Wireframe como fonte de verdade visual**  
+   - `MiniIDE-Explore.html` é referência obrigatória para espaçamento, proporções e organização dos painéis.  
+   - Toda HU de UI deve declarar:
+     - O que mantém igual ao wireframe;
+     - O que adiciona;
+     - Qualquer divergência necessária (com justificativa).
+
+3. **Integração incremental**  
+   - Novas features devem ser plugadas em:
+     - `Sidebar` (coluna esquerda),  
+     - `WorkspaceTabs` (coluna central),  
+     - `DiscoveryNotes` (coluna direita),  
+     sem destruir a estrutura base.
+
+4. **Integração com backend**  
+   - Toda integração com `/healthz` e `/analyze` deve respeitar:
+     - Tipagem de `@mini-ide/shared`;  
+     - Tratamento de erros amigável na UI;  
+     - Não quebrar o pipeline (`pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm build`).
 
 ---
 
-## 10. Scripts Bash e automação
+## 6. Lote 3 – Explore Workspace (v1.0.18)
 
-Este projeto depende bastante de scripts Bash para:
+Este lote implementa e integra 3 HUs principais na UI, além de consolidar a integração no `WorkspaceTabs`:
 
-- Rodar pipelines locais.
-- Padronizar fluxos de build/test.
-- Facilitar operações repetitivas.
+- **HU-UI-Discovery-Notes-002 – Discovery Notes Evoluídas**  
+- **HU-UI-Explore-Mode-001 – Modo Explorar com Coleta Automática (Overview)**  
+- **HU-UI-Timeline-003 – Timeline de Exploração (Timeline)**  
 
-### 10.1 Quando criar um script Bash
+### 6.1 HU-UI-Discovery-Notes-002 — Discovery Notes Evoluídas
 
-Crie (ou atualize) um `.sh` quando:
+**Arquivos principais**:
 
-- Houver uma sequência de comandos de terminal que:
-  - Precise ser repetida com frequência, ou
-  - Precise ser reproduzida de forma idêntica em diferentes máquinas, ou
-  - For parte de um fluxo oficial (lint/test/typecheck/build, geração de docs, smoke, etc.).
+- `packages/ui/src/components/discovery/DiscoveryNotes.tsx`
+- `packages/ui/src/components/discovery/DiscoveryNotes.module.css`
+- Testes: `packages/ui/test/components/DiscoveryNotes.test.tsx`
 
-Não há obrigatoriedade de “transformar todo código em script Bash”.  
-O objetivo é automatizar fluxos operacionais complexos, não substituir código TypeScript.
+**Objetivo**  
+Transformar o painel direito em um **editor assistido** de notas de descoberta, com:
 
-### 10.2 Padrão de scripts Bash
+- Campos editáveis:
+  - Intenção  
+  - Requisitos  
+  - Restrições  
+  - Exemplos & Referências
+- Persistência local no navegador (storage estilo `localStorage`), sem quebrar SSR ou ambientes sem DOM.
 
-Sempre que criar um novo script:
+**Implementação**
 
-- Use shebang e flags de segurança:
+- Utiliza React hooks (`useState`, `useEffect`, `useCallback`) para gerenciar o estado das notas.
+- Introduz um tipo seguro de storage:
 
-  ```bash
-  #!/usr/bin/env bash
-  set -euo pipefail
+  ```ts
+  type SafeStorage = {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): void;
+  } | null;
   ```
 
-- Inclua um cabeçalho no início com:
-  - Descrição do propósito do script.
-  - Modo de uso (exemplos de execução).
-  - Pré-requisitos.
-  - Variáveis de ambiente relevantes.
-  - Efeitos colaterais (arquivos gerados/alterados).
+- Função de descoberta de storage:
 
-- Padronize logs de saída, por exemplo:
+  ```ts
+  function getSafeStorage(): SafeStorage {
+    try {
+      if (typeof globalThis === 'undefined') return null;
 
-  ```bash
-  echo "[info] Iniciando build do server..."
-  echo "[ok] Build do server concluída."
-  echo "[warn] CLI global não encontrada, usando CLI local."
-  echo "[erro] Typecheck falhou, abortando."
+      const maybeStorage = (globalThis as { localStorage?: unknown }).localStorage;
+      if (!maybeStorage) return null;
+
+      const storage = maybeStorage as { getItem?: unknown; setItem?: unknown };
+      if (typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function') {
+        return null;
+      }
+
+      return storage as SafeStorage;
+    } catch {
+      return null;
+    }
+  }
   ```
 
-- Salve os scripts em:
-  - `scripts/` (scripts gerais)
-  - `packages/<nome>/scripts/` (scripts específicos de um pacote)
+- Carregamento e salvamento com tratamento de erros:
+
+  ```ts
+  function loadNotesFromStorage(storage: SafeStorage): DiscoveryNotesData { ... }
+  function saveNotesToStorage(storage: SafeStorage, notes: DiscoveryNotesData): void { ... }
+  ```
+
+- Na montagem, a UI tenta carregar as notas previamente salvas; sempre que as notas mudam, o componente persiste os dados de forma segura.
+
+**Regras importantes**
+
+- Nenhum uso direto de `window` ou `localStorage` sem checagem;  
+- Nenhum `eslint-disable` residual (lint limpo);  
+- Layout do painel direito (~360px) preservado, sem impactar as demais colunas.
+
+**Testes**
+
+- Cobrem:
+  - Renderização inicial;  
+  - Edição de cada campo;  
+  - Persistência com storage disponível;  
+  - Comportamento sem storage (fallback seguro);  
+  - Acessibilidade básica (labels, aria-labels).
 
 ---
 
-## 11. O que ainda não é exigido (mas está no backlog)
+### 6.2 HU-UI-Explore-Mode-001 — Modo Explorar (Overview)
 
-Alguns itens não são obrigatórios neste momento, mas já existem como HUs no backlog (especialmente no épico **E-Hardening**):
+**Arquivos principais**:
 
-- Testes E2E completos do fluxo Mini-IDE.
-- **Aprimoramento progressivo** dos thresholds mínimos de cobertura já implementados (HU-Quality-Coverage-Thresholds, v1.0.17), elevando-os até os valores finais desejados por pacote.
-- Abstração de provider LLM real (OpenAI, DeepSeek etc.), mantendo o mock para testes.
-- Métricas de observabilidade (Prometheus, dashboards etc.).
+- `packages/ui/src/components/explore/ExploreOverview.tsx`
+- `packages/ui/src/components/explore/ExploreOverview.module.css`
+- Testes: `packages/ui/test/components/ExploreOverview.test.tsx`
 
-Até essas HUs serem implementadas:
+**Objetivo**  
+Transformar a aba **Overview** em um painel de estado da sessão, exibindo:
 
-- Já existe **gate de coverage** com baseline realista; o aumento dos thresholds para níveis mais agressivos ainda não é exigido.
-- Não há E2E obrigatório na pipeline de CI.
-- O LLM pode continuar simulado no server.
-- Logs estruturados já existem, mas sem métricas formais.
+- **Estado da sessão**: `Discovery`, `Execution`, `Review` ou `Idle`;  
+- Informações do **projeto atual**:
+  - Nome do projeto;  
+  - Repositório;  
+  - Branch;  
+  - Caminho local (quando relevante);  
+- **Últimas análises** (mockadas nesta versão):
+  - Timestamp da execução;  
+  - Resumo curto;  
+  - Referência ao `requestId` ou similar.
 
-Conforme essas HUs forem sendo entregues:
+**Implementação**
 
-- Este `DEVELOPMENT.md` deve ser atualizado para refletir:
-  - Novos comandos necessários.
-  - Novas regras de qualidade (ex.: coverage mínimo por pacote em novos patamares).
-  - Novos requisitos (ex.: CI obrigatória em PR, execução de E2E na pipeline).
+- Componente `ExploreOverview` recebe (hoje) dados mockados, com tipagem clara para futura integração real.
+- Layout respeita o wireframe, com:
+
+  - Bloco superior de “estado da sessão”;  
+  - Bloco de “projeto atual”;  
+  - Lista de “últimas análises”.
+
+**Testes**
+
+- Validam:
+  - Renderização com valores padrão;  
+  - Renderização de cada estado de sessão;  
+  - Exibição das informações básicas do projeto;  
+  - Exibição da lista de análises;  
+  - Estrutura e acessibilidade.
 
 ---
 
-## 12. Integração com o Prompt-Mestre e Backlog de HUs
+### 6.3 HU-UI-Timeline-003 — Timeline de Exploração
 
-Os agentes de IA (Claude, DeepSeek, Analysis Agent etc.) seguem regras adicionais descritas no:
+**Arquivos principais**:
 
-- **Prompt-Mestre Mini-IDE** (documento separado).
-- **Backlog de Histórias de Usuário** (`docs/HISTORIAS-USUARIO.md` ou equivalente).
+- `packages/ui/src/components/explore/ExploreTimeline.tsx`
+- `packages/ui/src/components/explore/ExploreTimeline.module.css`
+- Testes: `packages/ui/test/components/ExploreTimeline.test.tsx`
 
-Este `DEVELOPMENT.md` deve ser entendido como:
+**Objetivo**  
+Criar uma **timeline cronológica de eventos** da sessão, exibida na aba **Timeline** do painel central.
 
-- Manual de engenharia para qualquer desenvolvedor humano que queira:
-  - Clonar o repositório.
-  - Rodar o projeto localmente.
-  - Implementar HUs com segurança.
-  - Respeitar a cultura de qualidade do Mini-IDE.
+Tipos de eventos suportados (mock inicial):
 
-Sempre que houver dúvida entre o que está aqui e o que está no Prompt-Mestre:
+- `analysis` — chamadas a `/analyze`;  
+- `discovery` — atualizações de Discovery Notes;  
+- `project` — mudanças de branch / contexto de projeto;  
+- `execution` — execuções de pipelines / scripts;  
+- `system` — eventos de sistema / housekeeping.
 
-- Para comportamento de IA → o **Prompt-Mestre** é a fonte oficial.
-- Para estado técnico do repositório → este `DEVELOPMENT.md` deve ser mantido em linha com o código.
+**Implementação**
+
+- Ordenação dos eventos do mais recente para o mais antigo;
+- Filtros por tipo de evento (múltipla seleção);
+- Cada evento exibe:
+  - Ícone e cor por tipo;  
+  - Título curto;  
+  - Descrição opcional;  
+  - Data/hora absoluta (`HH:MM:SS`);  
+  - Tempo relativo (“X min atrás”).
+
+**Testes**
+
+- Validam:
+  - Renderização da lista de eventos;  
+  - Ordenação correta (mais recente primeiro);  
+  - Aplicação de filtros por tipo;  
+  - Estado vazio quando não há eventos;  
+  - Formatação de timestamp e tempo relativo;  
+  - Acessibilidade básica.
+
+---
+
+### 6.4 Integração no WorkspaceTabs
+
+**Arquivos principais**:
+
+- `packages/ui/src/components/WorkspaceTabs.tsx`
+- `packages/ui/src/components/WorkspaceTabs.module.css`
+- Testes: `packages/ui/test/components/WorkspaceTabs.test.tsx`  
+- Integração com `App.tsx` e layout geral.
+
+**Objetivo**  
+Conectar as novas funcionalidades às abas internas do painel central, mantendo as **10 abas definidas em governança** e o layout de 3 colunas intacto.
+
+**Mapeamento das abas**
+
+- `overview` → `ExploreOverview`  
+- `analyze` → `ServerStatus` + `AnalyzePlayground`  
+- `timeline` → `ExploreTimeline`  
+- `hus`, `docs`, `tests`, `personas`, `runs`, `metrics`, `outputs` → placeholders amigáveis, preparados para evolução futura.
+
+**Comportamento padrão**
+
+- Aba inicial: `overview`;  
+- Clique em uma aba:
+  - Atualiza o estado interno `activeTab`;  
+  - Aplica classe CSS de aba ativa;  
+  - Renderiza apenas o conteúdo da aba selecionada.
+
+**Testes**
+
+- Verificam:
+  - Renderização das 10 abas;  
+  - Aba Overview ativa por padrão;  
+  - Troca para aba Analyze ao clique;  
+  - Presença de `ServerStatus` e `AnalyzePlayground` na aba Analyze;  
+  - Integração com `App` (layout de 3 colunas + abas).
+
+---
+
+## 7. Qualidade e estado da release v1.0.18 (UI Lote 3)
+
+Para o estado atual descrito neste documento:
+
+- `REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh`  
+  - ✅ Lint — passou  
+  - ✅ Type-check — passou  
+  - ✅ Testes (Vitest) — passaram em todos os pacotes  
+  - ✅ Build — passou em todos os pacotes  
+  - ✅ Smoke `/healthz` — OK  
+  - ✅ Smoke `/analyze` — contrato respeitado
+
+- `pnpm -r test`  
+  - `@mini-ide/shared` — 47 testes passando  
+  - `@mini-ide/ui` — 50 testes passando  
+  - `@mini-ide/analysis-agent` — 1 teste passando  
+  - `@mini-ide/cli` — 2 testes passando  
+  - `@mini-ide/server` — 65 testes passando  
+
+Este é o **ponto de restauração lógico** da release v1.0.18 com o **Lote 3 do Explore Workspace** implementado e validado.
+
+---
+
+## 8. Próximos passos sugeridos (UI)
+
+Fora do escopo implementado neste lote, ficam como backlog de UI (já discutidos conceitualmente):
+
+- **HU-UI-Export-005 — Exportar Sessão de Exploração**
+  - Exportar notas, timeline e último resultado de `/analyze` em Markdown/JSON.
+
+- **HU-UI-Workspace-State-Persistence-006 — Persistência do Workspace**
+  - Persistir aba ativa, conteúdo das Discovery Notes (já parcialmente feito) e último input do Analyze.
+
+- **HU-UI-Theme-System-007 — Sistema de Tema Claro/Escuro**
+  - Implementar toggle de tema no header, com persistência em storage.
+
+Qualquer implementação futura deve:
+
+1. Respeitar as regras de governança da UI (layout 3 colunas, wireframe, integração incremental);  
+2. Manter a pipeline verde (`42_pipeline_checklist.sh`);  
+3. Atualizar este `DEVELOPMENT.md` descrevendo:
+   - HUs impactadas;  
+   - Arquivos principais;  
+   - Regras de negócio e de UI;  
+   - Estratégia de testes e qualidade.
 
