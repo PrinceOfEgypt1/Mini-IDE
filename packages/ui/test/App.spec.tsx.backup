@@ -1,0 +1,128 @@
+/**
+ * Testes para componente App
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { App } from '../src/App.js';
+
+describe('App', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    
+    // Mock de fetch para healthz (ServerStatus)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+    });
+  });
+
+  it('deve renderizar estrutura principal da aplicação', () => {
+    render(<App />);
+
+    // Header
+    expect(screen.getByText('Mini IDE')).toBeInTheDocument();
+    expect(screen.getByText('Analysis Agent')).toBeInTheDocument();
+    
+    // ServerStatus deve estar presente
+    expect(screen.getByTestId('server-status')).toBeInTheDocument();
+  });
+
+  it('deve renderizar tabs de navegação', () => {
+    render(<App />);
+
+    // Usar data-testid para buscar tabs específicas
+    expect(screen.getByTestId('tab-overview')).toBeInTheDocument();
+    expect(screen.getByTestId('tab-analyze')).toBeInTheDocument();
+  });
+
+  it('deve mostrar tab Overview por padrão', () => {
+    render(<App />);
+
+    const overviewTab = screen.getByTestId('tab-overview');
+    expect(overviewTab.className).toContain('active');
+    
+    expect(screen.getByText(/Bem-vindo à Mini IDE/i)).toBeInTheDocument();
+  });
+
+  it('deve trocar para tab Analyze ao clicar', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const analyzeTab = screen.getByTestId('tab-analyze');
+    await user.click(analyzeTab);
+
+    // Tab Analyze deve estar ativa
+    expect(analyzeTab.className).toContain('active');
+    
+    // Playground deve estar visível
+    expect(screen.getByTestId('analyze-playground')).toBeInTheDocument();
+  });
+
+  it('deve mostrar sidebar esquerda com "Projeto Atual"', () => {
+    render(<App />);
+
+    expect(screen.getByText('Projeto Atual')).toBeInTheDocument();
+    expect(screen.getByText('pronto')).toBeInTheDocument();
+  });
+
+  it('deve renderizar layout 3 colunas', () => {
+    const { container } = render(<App />);
+
+    const main = container.querySelector('.main');
+    expect(main).toBeInTheDocument();
+    
+    // Deve ter 3 children (sidebar, workspace, right panel)
+    expect(main?.children.length).toBe(3);
+  });
+
+  it('deve ocultar Overview ao mudar para Analyze', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Verificar que Overview está visível
+    expect(screen.getByText(/Bem-vindo à Mini IDE/i)).toBeInTheDocument();
+
+    // Clicar em Analyze usando data-testid
+    const analyzeTab = screen.getByTestId('tab-analyze');
+    await user.click(analyzeTab);
+
+    // Overview não deve mais estar visível
+    expect(screen.queryByText(/Bem-vindo à Mini IDE/i)).not.toBeInTheDocument();
+  });
+
+  it('deve voltar para Overview ao clicar novamente', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const analyzeTab = screen.getByTestId('tab-analyze');
+    const overviewTab = screen.getByTestId('tab-overview');
+
+    // Ir para Analyze
+    await user.click(analyzeTab);
+    expect(screen.getByTestId('analyze-playground')).toBeInTheDocument();
+
+    // Voltar para Overview
+    await user.click(overviewTab);
+    expect(screen.getByText(/Bem-vindo à Mini IDE/i)).toBeInTheDocument();
+    expect(screen.queryByTestId('analyze-playground')).not.toBeInTheDocument();
+  });
+
+  it('deve chamar /healthz automaticamente (ServerStatus)', async () => {
+    render(<App />);
+
+    // Aguardar que ServerStatus faça a primeira chamada
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalled();
+    });
+
+    // Verificar que chamou o endpoint correto
+    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls;
+    const healthzCall = calls.find(call => 
+      call[0]?.toString().includes('/healthz')
+    );
+    
+    expect(healthzCall).toBeDefined();
+  });
+});

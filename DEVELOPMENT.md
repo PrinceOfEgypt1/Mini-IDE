@@ -53,11 +53,11 @@ Scripts globais relevantes na raiz:
 
 ## 3. Tooling e padrões de qualidade
 
-- **Gerenciador de pacotes:** `pnpm`  
-- **Lint:** `eslint` com configuração por pacote (incluindo `packages/ui/eslint.config.js`).  
-- **Testes:** `vitest` com `jsdom` para testes de UI.  
-- **Build UI:** `vite build` via script `@mini-ide/ui: build`.  
-- **Type-check:** `tsc --noEmit` por pacote.  
+- **Gerenciador de pacotes:** `pnpm`
+- **Lint:** `eslint` com configuração por pacote (incluindo `packages/ui/eslint.config.js`).
+- **Testes:** `vitest` com `jsdom` para testes de UI.
+- **Build UI:** `vite build` via script `@mini-ide/ui: build`.
+- **Type-check:** `tsc --noEmit` por pacote.
 - **Husky / pre-commit:** hooks garantindo que commits passem pelos checks mínimos (lint, typecheck filtrado).
 
 O pipeline de validação recomendado:
@@ -81,10 +81,10 @@ Que executa, nesta ordem:
 
 ### 4.1 Endpoint GET /healthz
 
-- Retorna 200 quando o servidor está saudável.  
-- Usado pela UI (ServerStatus) para exibir estado:  
-  - ⏳ verificando;  
-  - 🟢 servidor online;  
+- Retorna 200 quando o servidor está saudável.
+- Usado pela UI (ServerStatus) para exibir estado:
+  - ⏳ verificando;
+  - 🟢 servidor online;
   - 🔴 servidor indisponível.
 
 ### 4.2 Endpoint POST /analyze
@@ -115,7 +115,7 @@ A UI consome esse contrato via `AnalyzePlayground`, exibindo a resposta de forma
 
 Configuração do backend na UI:
 
-- Arquivo: `packages/ui/src/config/server.ts`  
+- Arquivo: `packages/ui/src/config/server.ts`
 - Usa a env `VITE_MINI_IDE_SERVER_URL` como base para:
   - `getBaseUrl()`
   - `getHealthzUrl()`
@@ -125,60 +125,60 @@ Configuração do backend na UI:
 
 O layout do Explore Workspace segue **estritamente** o wireframe oficial `MiniIDE-Explore.html` e as regras estabelecidas na governança da UI:
 
-- **Coluna esquerda (~280px)** — `Sidebar`  
-  - Projeto atual (nome, repo, branch);  
-  - Árvore de arquivos (placeholder para evolução futura);  
+- **Coluna esquerda (~280px)** — `Sidebar`
+  - Projeto atual (nome, repo, branch);
+  - Árvore de arquivos (placeholder para evolução futura);
   - Status do projeto / sessão.
 
-- **Coluna central (expansível)** — `WorkspaceTabs`  
+- **Coluna central (expansível)** — `WorkspaceTabs`
   - 10 abas internas:
-    1. Overview  
-    2. HUs  
-    3. Docs  
-    4. Testes  
-    5. Analyze  
-    6. Personas & Plano  
-    7. Timeline  
-    8. Runs  
-    9. Métricas  
+    1. Overview
+    2. HUs
+    3. Docs
+    4. Testes
+    5. Analyze
+    6. Personas & Plano
+    7. Timeline
+    8. Runs
+    9. Métricas
     10. Outputs
 
-- **Coluna direita (~360px)** — `DiscoveryNotes`  
-  - Intenção;  
-  - Requisitos;  
-  - Restrições;  
+- **Coluna direita (~360px)** — `DiscoveryNotes`
+  - Intenção;
+  - Requisitos;
+  - Restrições;
   - Exemplos & Referências.
 
 Header e footer:
 
-- **Header**: título da Mini-IDE, contexto da sessão, badges de agente (ex.: *Analysis Agent*), estado de exploração.  
+- **Header**: título da Mini-IDE, contexto da sessão, badges de agente (ex.: _Analysis Agent_), estado de exploração.
 - **Footer**: área de chat (textarea) + botões de ação (Anexar, Enviar, etc.).
 
 ### 5.3 Governança da UI — Explore Workspace (seção 5.6.5 lógica)
 
 Regras imutáveis de governança visual e estrutural:
 
-1. **Layout de 3 colunas é fixo**  
+1. **Layout de 3 colunas é fixo**
    - Não é permitido substituir o layout por modo “tela cheia” ou “multi-layout” sem HU explícita de redesign.
 
-2. **Wireframe como fonte de verdade visual**  
-   - `MiniIDE-Explore.html` é referência obrigatória para espaçamento, proporções e organização dos painéis.  
+2. **Wireframe como fonte de verdade visual**
+   - `MiniIDE-Explore.html` é referência obrigatória para espaçamento, proporções e organização dos painéis.
    - Toda HU de UI deve declarar:
      - O que mantém igual ao wireframe;
      - O que adiciona;
      - Qualquer divergência necessária (com justificativa).
 
-3. **Integração incremental**  
+3. **Integração incremental**
    - Novas features devem ser plugadas em:
-     - `Sidebar` (coluna esquerda),  
-     - `WorkspaceTabs` (coluna central),  
+     - `Sidebar` (coluna esquerda),
+     - `WorkspaceTabs` (coluna central),
      - `DiscoveryNotes` (coluna direita),  
-     sem destruir a estrutura base.
+       sem destruir a estrutura base.
 
-4. **Integração com backend**  
+4. **Integração com backend**
    - Toda integração com `/healthz` e `/analyze` deve respeitar:
-     - Tipagem de `@mini-ide/shared`;  
-     - Tratamento de erros amigável na UI;  
+     - Tipagem de `@mini-ide/shared`;
+     - Tratamento de erros amigável na UI;
      - Não quebrar o pipeline (`pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm build`).
 
 ---
@@ -187,9 +187,9 @@ Regras imutáveis de governança visual e estrutural:
 
 Este lote implementa e integra 3 HUs principais na UI, além de consolidar a integração no `WorkspaceTabs`:
 
-- **HU-UI-Discovery-Notes-002 – Discovery Notes Evoluídas**  
-- **HU-UI-Explore-Mode-001 – Modo Explorar com Coleta Automática (Overview)**  
-- **HU-UI-Timeline-003 – Timeline de Exploração (Timeline)**  
+- **HU-UI-Discovery-Notes-002 – Discovery Notes Evoluídas**
+- **HU-UI-Explore-Mode-001 – Modo Explorar com Coleta Automática (Overview)**
+- **HU-UI-Timeline-003 – Timeline de Exploração (Timeline)**
 
 ### 6.1 HU-UI-Discovery-Notes-002 — Discovery Notes Evoluídas
 
@@ -203,9 +203,9 @@ Este lote implementa e integra 3 HUs principais na UI, além de consolidar a int
 Transformar o painel direito em um **editor assistido** de notas de descoberta, com:
 
 - Campos editáveis:
-  - Intenção  
-  - Requisitos  
-  - Restrições  
+  - Intenção
+  - Requisitos
+  - Restrições
   - Exemplos & Referências
 - Persistência local no navegador (storage estilo `localStorage`), sem quebrar SSR ou ambientes sem DOM.
 
@@ -254,17 +254,17 @@ Transformar o painel direito em um **editor assistido** de notas de descoberta, 
 
 **Regras importantes**
 
-- Nenhum uso direto de `window` ou `localStorage` sem checagem;  
-- Nenhum `eslint-disable` residual (lint limpo);  
+- Nenhum uso direto de `window` ou `localStorage` sem checagem;
+- Nenhum `eslint-disable` residual (lint limpo);
 - Layout do painel direito (~360px) preservado, sem impactar as demais colunas.
 
 **Testes**
 
 - Cobrem:
-  - Renderização inicial;  
-  - Edição de cada campo;  
-  - Persistência com storage disponível;  
-  - Comportamento sem storage (fallback seguro);  
+  - Renderização inicial;
+  - Edição de cada campo;
+  - Persistência com storage disponível;
+  - Comportamento sem storage (fallback seguro);
   - Acessibilidade básica (labels, aria-labels).
 
 ---
@@ -280,33 +280,32 @@ Transformar o painel direito em um **editor assistido** de notas de descoberta, 
 **Objetivo**  
 Transformar a aba **Overview** em um painel de estado da sessão, exibindo:
 
-- **Estado da sessão**: `Discovery`, `Execution`, `Review` ou `Idle`;  
+- **Estado da sessão**: `Discovery`, `Execution`, `Review` ou `Idle`;
 - Informações do **projeto atual**:
-  - Nome do projeto;  
-  - Repositório;  
-  - Branch;  
-  - Caminho local (quando relevante);  
+  - Nome do projeto;
+  - Repositório;
+  - Branch;
+  - Caminho local (quando relevante);
 - **Últimas análises** (mockadas nesta versão):
-  - Timestamp da execução;  
-  - Resumo curto;  
+  - Timestamp da execução;
+  - Resumo curto;
   - Referência ao `requestId` ou similar.
 
 **Implementação**
 
 - Componente `ExploreOverview` recebe (hoje) dados mockados, com tipagem clara para futura integração real.
 - Layout respeita o wireframe, com:
-
-  - Bloco superior de “estado da sessão”;  
-  - Bloco de “projeto atual”;  
+  - Bloco superior de “estado da sessão”;
+  - Bloco de “projeto atual”;
   - Lista de “últimas análises”.
 
 **Testes**
 
 - Validam:
-  - Renderização com valores padrão;  
-  - Renderização de cada estado de sessão;  
-  - Exibição das informações básicas do projeto;  
-  - Exibição da lista de análises;  
+  - Renderização com valores padrão;
+  - Renderização de cada estado de sessão;
+  - Exibição das informações básicas do projeto;
+  - Exibição da lista de análises;
   - Estrutura e acessibilidade.
 
 ---
@@ -324,10 +323,10 @@ Criar uma **timeline cronológica de eventos** da sessão, exibida na aba **Time
 
 Tipos de eventos suportados (mock inicial):
 
-- `analysis` — chamadas a `/analyze`;  
-- `discovery` — atualizações de Discovery Notes;  
-- `project` — mudanças de branch / contexto de projeto;  
-- `execution` — execuções de pipelines / scripts;  
+- `analysis` — chamadas a `/analyze`;
+- `discovery` — atualizações de Discovery Notes;
+- `project` — mudanças de branch / contexto de projeto;
+- `execution` — execuções de pipelines / scripts;
 - `system` — eventos de sistema / housekeeping.
 
 **Implementação**
@@ -335,20 +334,20 @@ Tipos de eventos suportados (mock inicial):
 - Ordenação dos eventos do mais recente para o mais antigo;
 - Filtros por tipo de evento (múltipla seleção);
 - Cada evento exibe:
-  - Ícone e cor por tipo;  
-  - Título curto;  
-  - Descrição opcional;  
-  - Data/hora absoluta (`HH:MM:SS`);  
+  - Ícone e cor por tipo;
+  - Título curto;
+  - Descrição opcional;
+  - Data/hora absoluta (`HH:MM:SS`);
   - Tempo relativo (“X min atrás”).
 
 **Testes**
 
 - Validam:
-  - Renderização da lista de eventos;  
-  - Ordenação correta (mais recente primeiro);  
-  - Aplicação de filtros por tipo;  
-  - Estado vazio quando não há eventos;  
-  - Formatação de timestamp e tempo relativo;  
+  - Renderização da lista de eventos;
+  - Ordenação correta (mais recente primeiro);
+  - Aplicação de filtros por tipo;
+  - Estado vazio quando não há eventos;
+  - Formatação de timestamp e tempo relativo;
   - Acessibilidade básica.
 
 ---
@@ -359,7 +358,7 @@ Tipos de eventos suportados (mock inicial):
 
 - `packages/ui/src/components/WorkspaceTabs.tsx`
 - `packages/ui/src/components/WorkspaceTabs.module.css`
-- Testes: `packages/ui/test/components/WorkspaceTabs.test.tsx`  
+- Testes: `packages/ui/test/components/WorkspaceTabs.test.tsx`
 - Integração com `App.tsx` e layout geral.
 
 **Objetivo**  
@@ -367,26 +366,26 @@ Conectar as novas funcionalidades às abas internas do painel central, mantendo 
 
 **Mapeamento das abas**
 
-- `overview` → `ExploreOverview`  
-- `analyze` → `ServerStatus` + `AnalyzePlayground`  
-- `timeline` → `ExploreTimeline`  
+- `overview` → `ExploreOverview`
+- `analyze` → `ServerStatus` + `AnalyzePlayground`
+- `timeline` → `ExploreTimeline`
 - `hus`, `docs`, `tests`, `personas`, `runs`, `metrics`, `outputs` → placeholders amigáveis, preparados para evolução futura.
 
 **Comportamento padrão**
 
-- Aba inicial: `overview`;  
+- Aba inicial: `overview`;
 - Clique em uma aba:
-  - Atualiza o estado interno `activeTab`;  
-  - Aplica classe CSS de aba ativa;  
+  - Atualiza o estado interno `activeTab`;
+  - Aplica classe CSS de aba ativa;
   - Renderiza apenas o conteúdo da aba selecionada.
 
 **Testes**
 
 - Verificam:
-  - Renderização das 10 abas;  
-  - Aba Overview ativa por padrão;  
-  - Troca para aba Analyze ao clique;  
-  - Presença de `ServerStatus` e `AnalyzePlayground` na aba Analyze;  
+  - Renderização das 10 abas;
+  - Aba Overview ativa por padrão;
+  - Troca para aba Analyze ao clique;
+  - Presença de `ServerStatus` e `AnalyzePlayground` na aba Analyze;
   - Integração com `App` (layout de 3 colunas + abas).
 
 ---
@@ -395,20 +394,20 @@ Conectar as novas funcionalidades às abas internas do painel central, mantendo 
 
 Para o estado atual descrito neste documento:
 
-- `REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh`  
-  - ✅ Lint — passou  
-  - ✅ Type-check — passou  
-  - ✅ Testes (Vitest) — passaram em todos os pacotes  
-  - ✅ Build — passou em todos os pacotes  
-  - ✅ Smoke `/healthz` — OK  
+- `REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh`
+  - ✅ Lint — passou
+  - ✅ Type-check — passou
+  - ✅ Testes (Vitest) — passaram em todos os pacotes
+  - ✅ Build — passou em todos os pacotes
+  - ✅ Smoke `/healthz` — OK
   - ✅ Smoke `/analyze` — contrato respeitado
 
-- `pnpm -r test`  
-  - `@mini-ide/shared` — 47 testes passando  
-  - `@mini-ide/ui` — 50 testes passando  
-  - `@mini-ide/analysis-agent` — 1 teste passando  
-  - `@mini-ide/cli` — 2 testes passando  
-  - `@mini-ide/server` — 65 testes passando  
+- `pnpm -r test`
+  - `@mini-ide/shared` — 47 testes passando
+  - `@mini-ide/ui` — 50 testes passando
+  - `@mini-ide/analysis-agent` — 1 teste passando
+  - `@mini-ide/cli` — 2 testes passando
+  - `@mini-ide/server` — 65 testes passando
 
 Este é o **ponto de restauração lógico** da release v1.0.18 com o **Lote 3 do Explore Workspace** implementado e validado.
 
@@ -429,11 +428,10 @@ Fora do escopo implementado neste lote, ficam como backlog de UI (já discutidos
 
 Qualquer implementação futura deve:
 
-1. Respeitar as regras de governança da UI (layout 3 colunas, wireframe, integração incremental);  
-2. Manter a pipeline verde (`42_pipeline_checklist.sh`);  
+1. Respeitar as regras de governança da UI (layout 3 colunas, wireframe, integração incremental);
+2. Manter a pipeline verde (`42_pipeline_checklist.sh`);
 3. Atualizar este `DEVELOPMENT.md` descrevendo:
-   - HUs impactadas;  
-   - Arquivos principais;  
-   - Regras de negócio e de UI;  
+   - HUs impactadas;
+   - Arquivos principais;
+   - Regras de negócio e de UI;
    - Estratégia de testes e qualidade.
-

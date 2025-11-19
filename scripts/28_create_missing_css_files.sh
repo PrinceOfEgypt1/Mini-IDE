@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+################################################################################
+# Script: 28_create_missing_css_files.sh
+# Objetivo: Criar arquivos CSS que faltam
+################################################################################
+
+echo "[info] Criando arquivos CSS faltantes..."
+
+# ServerStatus.module.css
+cat <<'EOF' > packages/ui/src/components/ServerStatus.module.css
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.text {
+  white-space: nowrap;
+}
+
+/* Estados */
+.checking {
+  background: rgba(159, 176, 211, 0.1);
+  border-color: rgba(159, 176, 211, 0.3);
+  color: var(--muted, #9fb0d3);
+}
+
+.checking .indicator {
+  background: var(--muted, #9fb0d3);
+}
+
+.online {
+  background: rgba(71, 230, 161, 0.1);
+  border-color: rgba(71, 230, 161, 0.3);
+  color: var(--ok, #47e6a1);
+}
+
+.online .indicator {
+  background: var(--ok, #47e6a1);
+}
+
+.offline {
+  background: rgba(255, 92, 122, 0.1);
+  border-color: rgba(255, 92, 122, 0.3);
+  color: var(--danger, #ff5c7a);
+}
+
+.offline .indicator {
+  background: var(--danger, #ff5c7a);
+  animation: none;
+}
+
+.error {
+  background: rgba(255, 92, 122, 0.1);
+  border-color: rgba(255, 92, 122, 0.3);
+  color: var(--danger, #ff5c7a);
+}
+
+.error .indicator {
+  background: var(--danger, #ff5c7a);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+EOF
+
+# AnalyzePlayground.module.css
+cat <<'EOF' > packages/ui/src/components/AnalyzePlayground.module.css
+.playground {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #24304a);
+  background: var(--panel, #141b2b);
+  color: var(--text, #e6ecff);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+}
+
+.textarea:focus {
+  border-color: var(--brand, #4ba3ff);
+}
+
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #24304a);
+  background: var(--panel, #141b2b);
+  color: var(--text, #e6ecff);
+  font-size: 13px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--brand, #4ba3ff);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button {
+  align-self: flex-start;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(180deg, var(--brand-2, #6ad3ff), var(--brand, #4ba3ff));
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(255, 92, 122, 0.1);
+  border: 1px solid rgba(255, 92, 122, 0.3);
+  color: var(--danger, #ff5c7a);
+  font-size: 13px;
+}
+
+.response {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+}
+
+.responseTitle {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.responseContent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.responseContent p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.metrics {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.metric {
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--chip, #222b40);
+  border: 1px solid var(--border, #24304a);
+  font-size: 12px;
+  color: var(--muted, #9fb0d3);
+}
+EOF
+
+echo "✅ Arquivos CSS criados"
+echo ""
+echo "[info] Validando..."
+
+pnpm --filter @mini-ide/ui test
+
+echo ""
+echo "✅ Todos os testes passaram!"
+echo ""
+echo "Próximo passo:"
+echo "  git add ."
+echo "  ./scripts/25_commit_wireframe_fix.sh"

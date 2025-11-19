@@ -1,0 +1,82 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statusBadge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: rgba(71, 230, 161, 0.15);
+  border: 1px solid rgba(71, 230, 161, 0.4);
+  color: var(--ok, #47e6a1);
+  font-size: 12px;
+}
+
+.filterInput {
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #24304a);
+  background: var(--panel-2, #101727);
+  color: var(--text, #e6ecff);
+  padding: 0 10px;
+  width: 100%;
+  outline: none;
+}
+
+.filterInput:focus {
+  border-color: var(--brand, #4ba3ff);
+}
+
+.tree {
+  flex: 1;
+  overflow: auto;
+  border-radius: 10px;
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--muted, #9fb0d3);
+}
+
+.treeItem {
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.treeItem:hover {
+  color: var(--text, #e6ecff);
+}
+
+.statusBar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted, #9fb0d3);
+}
+
+.statusItem {
+  display: flex;
+  gap: 6px;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.value {
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

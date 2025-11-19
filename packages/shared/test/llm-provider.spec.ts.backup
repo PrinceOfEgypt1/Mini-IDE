@@ -85,7 +85,7 @@ describe('MockLLMProvider', () => {
       await delayProvider.analyze('teste');
       const elapsed = Date.now() - startTime;
 
-      expect(elapsed).toBeGreaterThanOrEqual(delayMs - 5); // Tolerância para imprecisões de timing
+      expect(elapsed).toBeGreaterThanOrEqual(delayMs);
     });
 
     it('deve simular falha quando configurada', async () => {

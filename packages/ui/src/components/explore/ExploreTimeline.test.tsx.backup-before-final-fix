@@ -1,0 +1,195 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { ExploreTimeline, type TimelineEvent } from './ExploreTimeline';
+
+describe('ExploreTimeline', () => {
+  const mockEvents: TimelineEvent[] = [
+    {
+      id: '1',
+      type: 'message',
+      category: 'analysis',
+      title: 'Mensagem do usuário',
+      description: 'Usuário enviou mensagem',
+      timestamp: new Date('2024-01-15T10:00:00'),
+    },
+    {
+      id: '2',
+      type: 'response',
+      category: 'discovery',
+      title: 'Resposta do agente',
+      timestamp: new Date('2024-01-15T10:01:00'),
+    },
+  ];
+
+  describe('Renderização básica', () => {
+    it('deve renderizar sem erros quando vazio', () => {
+      render(<ExploreTimeline events={[]} />);
+      expect(screen.getByText(/Timeline de Exploração/i)).toBeInTheDocument();
+    });
+
+    it('deve renderizar eventos quando fornecidos', () => {
+      render(<ExploreTimeline events={mockEvents} />);
+      expect(screen.getByText('Mensagem do usuário')).toBeInTheDocument();
+      expect(screen.getByText('Resposta do agente')).toBeInTheDocument();
+    });
+  });
+
+  describe('Formatação de timestamp', () => {
+    it('deve formatar timestamps corretamente', () => {
+      const events: TimelineEvent[] = [
+        {
+          id: '1',
+          type: 'message',
+          category: 'analysis',
+          title: 'Evento com timestamp',
+          timestamp: new Date('2024-01-15T14:30:45'),
+        },
+      ];
+      render(<ExploreTimeline events={events} />);
+      expect(screen.getByText(/14:30:45/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Tipos de eventos comuns', () => {
+    it('deve renderizar evento do tipo "message"', () => {
+      const events: TimelineEvent[] = [
+        {
+          id: '1',
+          type: 'message',
+          category: 'analysis',
+          title: 'Mensagem de teste',
+          timestamp: new Date(),
+        },
+      ];
+      render(<ExploreTimeline events={events} />);
+      expect(screen.getByText('Mensagem de teste')).toBeInTheDocument();
+    });
+
+    it('deve renderizar evento do tipo "response"', () => {
+      const events: TimelineEvent[] = [
+        {
+          id: '2',
+          type: 'response',
+          category: 'discovery',
+          title: 'Resposta de teste',
+          timestamp: new Date(),
+        },
+      ];
+      render(<ExploreTimeline events={events} />);
+      expect(screen.getByText('Resposta de teste')).toBeInTheDocument();
+    });
+
+    it('deve renderizar evento do tipo "plan"', () => {
+      const events: TimelineEvent[] = [
+        {
+          id: '3',
+          type: 'plan',
+          category: 'project',
+          title: 'Plano de teste',
+          timestamp: new Date(),
+        },
+      ];
+      render(<ExploreTimeline events={events} />);
+      expect(screen.getByText('Plano de teste')).toBeInTheDocument();
+    });
+  });
+
+  describe('Ordenação de eventos', () => {
+    it('deve exibir eventos em ordem cronológica inversa', () => {
+      const events: TimelineEvent[] = [
+        {
+          id: '1',
+          type: 'message',
+          category: 'analysis',
+          title: 'Evento antigo',
+          timestamp: new Date('2024-01-15T10:00:00'),
+        },
+        {
+          id: '2',
+          type: 'response',
+          category: 'discovery',
+          title: 'Evento novo',
+          timestamp: new Date('2024-01-15T11:00:00'),
+        },
+      ];
+      render(<ExploreTimeline events={events} />);
+
+      const titles = screen.getAllByRole('heading', { level: 4 });
+      expect(titles[0]).toHaveTextContent('Evento novo');
+      expect(titles[1]).toHaveTextContent('Evento antigo');
+    });
+  });
+
+  describe('Performance com muitos eventos', () => {
+    it('deve renderizar 100+ eventos sem problemas', () => {
+      const manyEvents: TimelineEvent[] = Array.from({ length: 150 }, (_, i) => ({
+        id: `event-${i}`,
+        type: 'message' as const,
+        category: 'analysis' as const,
+        title: `Evento ${i}`,
+        timestamp: new Date(Date.now() + i * 1000),
+      }));
+      render(<ExploreTimeline events={manyEvents} />);
+
+      expect(screen.getByText('Evento 0')).toBeInTheDocument();
+      expect(screen.getByText('Evento 149')).toBeInTheDocument();
+    });
+  });
+
+  describe('Acessibilidade', () => {
+    it('deve ter estrutura semântica adequada', () => {
+      render(<ExploreTimeline events={mockEvents} />);
+
+      const timeElements = screen.getAllByRole('time');
+      expect(timeElements.length).toBeGreaterThan(0);
+    });
+
+    it('deve ter aria-label descritivo no container', () => {
+      const { container } = render(<ExploreTimeline events={mockEvents} />);
+      const timeline = container.firstChild as HTMLElement;
+      expect(timeline).toHaveAttribute('aria-label', 'Timeline de exploração');
+    });
+  });
+
+  describe('Estados edge-case', () => {
+    it('deve lidar com array vazio de eventos', () => {
+      render(<ExploreTimeline events={[]} />);
+      expect(screen.getByText(/Nenhum evento encontrado/i)).toBeInTheDocument();
+    });
+
+    it('deve lidar com eventos sem título', () => {
+      const events: TimelineEvent[] = [
+        {
+          id: '1',
+          type: 'message',
+          category: 'analysis',
+          title: '',
+          timestamp: new Date(),
+        },
+      ];
+      render(<ExploreTimeline events={events} />);
+      expect(screen.queryByText(/Nenhum evento/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Atualização de eventos', () => {
+    it('deve atualizar quando eventos mudam', () => {
+      const { rerender } = render(<ExploreTimeline events={mockEvents} />);
+      expect(screen.getByText('Mensagem do usuário')).toBeInTheDocument();
+
+      const newEvents: TimelineEvent[] = [
+        {
+          id: '3',
+          type: 'plan',
+          category: 'project',
+          title: 'Novo evento',
+          timestamp: new Date(),
+        },
+      ];
+
+      rerender(<ExploreTimeline events={newEvents} />);
+      expect(screen.queryByText('Mensagem do usuário')).not.toBeInTheDocument();
+      expect(screen.getByText('Novo evento')).toBeInTheDocument();
+    });
+  });
+});

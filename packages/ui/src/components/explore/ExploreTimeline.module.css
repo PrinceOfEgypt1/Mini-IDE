@@ -1,0 +1,310 @@
+/**
+ * @file ExploreTimeline.module.css
+ * @description Estilos para o componente ExploreTimeline (aba Timeline)
+ */
+
+.exploreTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px;
+  height: 100%;
+}
+
+/* ============================================================================
+   Header e Controles
+   ============================================================================ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 12px;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.badge {
+  background: var(--chip, #222b40);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #9fb0d3);
+}
+
+.filterControls {
+  display: flex;
+  gap: 8px;
+}
+
+.filterButton {
+  padding: 6px 12px;
+  background: var(--panel-3, #0c1323);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 8px;
+  color: var(--text, #e6ecff);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterButton:hover {
+  background: var(--panel-2, #101727);
+  border-color: var(--brand, #4ba3ff);
+}
+
+/* ============================================================================
+   Filtros por Tipo
+   ============================================================================ */
+
+.filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 12px;
+}
+
+.filterChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--panel-3, #0c1323);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 999px;
+  color: var(--muted, #9fb0d3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filterChip:hover {
+  border-color: var(--brand, #4ba3ff);
+  transform: scale(1.02);
+}
+
+.filterChipActive {
+  background: var(--brand, #4ba3ff);
+  border-color: var(--brand, #4ba3ff);
+  color: white;
+}
+
+.filterIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.filterLabel {
+  font-size: 13px;
+}
+
+/* ============================================================================
+   Timeline
+   ============================================================================ */
+
+.timeline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.timelineItem:hover {
+  background: var(--panel-2, #101727);
+  border-radius: 8px;
+}
+
+.timelineItem:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 27px;
+  top: 48px;
+  bottom: -16px;
+  width: 2px;
+  background: var(--border, #24304a);
+}
+
+.timelineDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 4px var(--panel-3, #0c1323);
+  z-index: 1;
+}
+
+.timelineContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.timelineHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.timelineIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.timelineTime {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.timeAbsolute {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  color: var(--text, #e6ecff);
+  font-weight: 600;
+}
+
+.timeRelative {
+  color: var(--muted, #9fb0d3);
+}
+
+.timelineBody {
+  padding-left: 28px;
+}
+
+.timelineTitle {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.timelineDescription {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--muted, #9fb0d3);
+  line-height: 1.5;
+}
+
+.timelineMetadata {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metadataItem {
+  font-size: 11px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 6px;
+  padding: 2px 6px;
+  color: var(--muted, #9fb0d3);
+}
+
+/* ============================================================================
+   Estado Vazio
+   ============================================================================ */
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted, #9fb0d3);
+  line-height: 1.6;
+}
+
+/* ============================================================================
+   Scrollbar customizada
+   ============================================================================ */
+
+.timeline::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timeline::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline::-webkit-scrollbar-thumb {
+  background: var(--border, #24304a);
+  border-radius: 3px;
+}
+
+.timeline::-webkit-scrollbar-thumb:hover {
+  background: var(--muted, #9fb0d3);
+}
+
+/* ============================================================================
+   Responsividade
+   ============================================================================ */
+
+@media (max-width: 900px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .filterControls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .timelineHeader {
+    flex-wrap: wrap;
+  }
+
+  .timelineTime {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+}
