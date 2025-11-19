@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REQUIRE_GLOBAL_CLI="${REQUIRE_GLOBAL_CLI:-1}"
+PREF_PORT="${PORT:-3200}"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+info(){ echo -e "${GREEN}[info]${NC} $*"; }
+ok(){ echo -e "${GREEN}[ok]${NC} $*"; }
+warn(){ echo -e "${YELLOW}[warn]${NC} $*"; }
+fail(){ echo -e "${RED}[fail]${NC} $*"; }
+
+# ---------- util: descobrir porta livre a partir de PREF_PORT ----------
+is_free() {
+  local p="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ! ss -ltn | awk '{print $4}' | grep -qE "(:|127\.0\.0\.1:|0\.0\.0\.0:|:::)${p}$"
+  else
+    ! (netstat -tln 2>/dev/null | awk '{print $4}' | grep -qE "(:|127\.0\.0\.1:|0\.0\.0\.0:|:::)${p}$")
+  fi
+}
+choose_port() {
+  local start="${1:-3200}"
+  local p="$start"
+  for _ in $(seq 0 50); do
+    if is_free "$p"; then echo "$p"; return 0; fi
+    p=$((p+1))
+  done
+  return 1
+}
+
+# ---------- 1) INSTALL ----------
+info "Etapa 1/10: pnpm install"
+pnpm install --frozen-lockfile && ok "Install OK"
+
+# ---------- 2) BUILD ----------
+info "Etapa 2/10: pnpm -r run build"
+pnpm -r run build && ok "Build OK"
+
+# ---------- 3) TYPECHECK ----------
+info "Etapa 3/10: pnpm -r exec tsc --noEmit"
+pnpm -r exec tsc --noEmit && ok "Typecheck OK"
+
+# ---------- 4) LINT ----------
+info "Etapa 4/10: pnpm -r run lint"
+pnpm -r run lint && ok "Lint OK"
+
+# ---------- 5) TESTS ----------
+info "Etapa 5/10: pnpm -r run test"
+pnpm -r run test && ok "Tests OK"
+
+# ---------- 6) DOCS (opcional) ----------
+info "Etapa 6/10: Verificando suporte a TypeDoc (docs:generate)"
+if command -v jq >/dev/null 2>&1 && [ -f package.json ]; then
+  if jq -er '.scripts."docs:generate"' package.json >/dev/null 2>&1; then
+    if pnpm run docs:generate; then ok "Docs geradas"; else warn "Falha ao gerar docs (não bloqueante)"; fi
+  else
+    warn "Script docs:generate ausente (pulando etapa)"
+  fi
+else
+  warn "jq ausente ou package.json indisponível — pulando docs"
+fi
+
+# ---------- 7) SERVER TEMP (persistente até o fim) ----------
+PORT="$(choose_port "$PREF_PORT")" || { fail "Não foi possível obter porta livre"; exit 1; }
+SERVER_URL="http://127.0.0.1:${PORT}"
+info "Etapa 7/10: Subindo servidor temporário na porta ${PORT}"
+
+LOG_LEVEL=info PORT="${PORT}" node packages/server/dist/index.js &  # não subimos outra instância depois
+SERVER_PID=$!
+
+cleanup() {
+  info "Encerrando servidor temporário (PID: $SERVER_PID)…"
+  kill $SERVER_PID 2>/dev/null || true
+  wait $SERVER_PID 2>/dev/null || true
+}
+trap cleanup EXIT
+
+# aguarda até 10s
+for i in $(seq 1 10); do
+  if curl -sf "${SERVER_URL}/healthz" >/dev/null; then
+    ok "Servidor pronto em ${SERVER_URL}"
+    break
+  fi
+  sleep 1
+  if [ "$i" -eq 10 ]; then
+    fail "Servidor não respondeu ao /healthz"
+    exit 1
+  fi
+done
+
+# ---------- 8) HEALTHZ ----------
+info "Etapa 8/10: Validando GET /healthz"
+HEALTH_JSON="$(curl -sf "${SERVER_URL}/healthz" || true)"
+if [ -z "$HEALTH_JSON" ]; then fail "/healthz vazio"; exit 1; fi
+if command -v jq >/dev/null 2>&1; then
+  STATUS=$(echo "$HEALTH_JSON" | jq -r '.status // empty' || true)
+  TS=$(echo "$HEALTH_JSON" | jq -r '.timestamp // empty' || true)
+  [ "$STATUS" = "ok" ] && [ -n "$TS" ] && ok "/healthz válido" || { fail "/healthz inválido: $HEALTH_JSON"; exit 1; }
+else
+  echo "$HEALTH_JSON" | grep -qF '"status":"ok"' && ok "/healthz válido" || { fail "/healthz inválido"; exit 1; }
+fi
+
+# ---------- 9) ANALYZE (tolerante) ----------
+info "Etapa 9/10: Validando POST /analyze (tolerante)"
+if command -v jq >/dev/null 2>&1; then
+  PAYLOAD="$(jq -n --arg text $'  Olá   Mini-IDE!  \r\n\r\n Demo de   compactação ' --argjson maxLen 100 '{text:$text,maxLen:$maxLen}')"
+else
+  PAYLOAD='{"text":"  Olá   Mini-IDE!  \r\n\r\n Demo de   compactação ","maxLen":100}'
+fi
+ANALYZE_JSON="$(curl -sf -X POST "${SERVER_URL}/analyze" -H "Content-Type: application/json" -d "$PAYLOAD" || true)"
+[ -n "$ANALYZE_JSON" ] || { fail "/analyze vazio"; exit 1; }
+
+if command -v jq >/dev/null 2>&1; then
+  REQ_OK=$(echo "$ANALYZE_JSON" | jq -e 'has("summary") and has("tokensUsed") and has("runId") and has("timestamp")' >/dev/null 2>&1 && echo yes || echo no)
+  [ "$REQ_OK" = "yes" ] || { fail "/analyze com shape inválido: $ANALYZE_JSON"; exit 1; }
+  NORM=$(echo "$ANALYZE_JSON" | jq -r '.summary
+    | gsub("\\r\\n?";" ") | gsub("\\n";" ")
+    | gsub("\\s+";" ") | sub("^\\s+";"") | sub("\\s+$";"")' 2>/dev/null || true)
+  [ -n "$NORM" ] && ok "/analyze válido" || { fail "/analyze summary vazio após normalização"; exit 1; }
+else
+  echo "$ANALYZE_JSON" | grep -qF '"summary"' && ok "/analyze contém summary" || { fail "/analyze sem summary"; exit 1; }
+fi
+
+# ---------- 10) CLI LOCAL (REUSA o mesmo servidor) ----------
+info "Etapa 10/10: Validando CLI local (reusando ${SERVER_URL})"
+CLI_OUT=$(node packages/cli/dist/index.js analyze "Pipeline test" --maxLen 50 --url "${SERVER_URL}" 2>&1 || true)
+echo "$CLI_OUT" | grep -qiE '(summary|Análise|Analysis)' && ok "CLI local funcionando" || warn "CLI saída inesperada"
+
+echo
+ok "=========================================="
+ok "PIPELINE COMPLETO ✅"
+ok "=========================================="
+echo

@@ -1,0 +1,207 @@
+/**
+ * @file WorkspaceTabs.module.css
+ * @description Estilos para o sistema de abas do workspace
+ */
+
+.workspaceTabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+}
+
+/* ============================================================================
+   Barra de Abas
+   ============================================================================ */
+
+.tabBar {
+  border-bottom: 1px solid var(--border, #24304a);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background: var(--border, #24304a);
+  border-radius: 2px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted, #9fb0d3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tab:hover {
+  background: var(--panel-2, #101727);
+  border-color: var(--border, #24304a);
+  color: var(--text, #e6ecff);
+}
+
+.tabActive {
+  background: var(--brand, #4ba3ff);
+  border-color: transparent;
+  color: white;
+}
+
+.tabActive:hover {
+  background: var(--brand-2, #6ad3ff);
+  color: white;
+}
+
+.tabIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tabLabel {
+  font-size: 13px;
+}
+
+/* ============================================================================
+   Conteúdo da Aba
+   ============================================================================ */
+
+.tabContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* ============================================================================
+   Aba Analyze
+   ============================================================================ */
+
+.analyzeTab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.analyzeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border, #24304a);
+}
+
+.analyzeTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+/* ============================================================================
+   Placeholder para abas não implementadas
+   ============================================================================ */
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.placeholderIcon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.placeholderTitle {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.placeholderText {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted, #9fb0d3);
+  line-height: 1.6;
+  max-width: 400px;
+}
+
+/* ============================================================================
+   Scrollbar customizada
+   ============================================================================ */
+
+.tabContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tabContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabContent::-webkit-scrollbar-thumb {
+  background: var(--border, #24304a);
+  border-radius: 3px;
+}
+
+.tabContent::-webkit-scrollbar-thumb:hover {
+  background: var(--muted, #9fb0d3);
+}
+
+/* ============================================================================
+   Responsividade
+   ============================================================================ */
+
+@media (maxwidth: 900px) {
+  .tab {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .tabIcon {
+    font-size: 12px;
+  }
+
+  .analyzeTab {
+    padding: 12px;
+  }
+
+  .placeholder {
+    padding: 40px 20px;
+    min-height: 200px;
+  }
+
+  .placeholderIcon {
+    font-size: 48px;
+  }
+
+  .placeholderTitle {
+    font-size: 18px;
+  }
+}

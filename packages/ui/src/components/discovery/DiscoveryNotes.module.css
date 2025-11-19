@@ -1,0 +1,121 @@
+/**
+ * @file DiscoveryNotes.module.css
+ * @description Estilos para o componente DiscoveryNotes (painel direito)
+ */
+
+.discoveryNotes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.header {
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted, #9fb0d3);
+  line-height: 1.4;
+}
+
+.notesContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.noteField {
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 10px;
+  padding: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.noteField:focus-within {
+  border-color: var(--brand, #4ba3ff);
+}
+
+.noteTitle {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.noteTextarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  background: var(--panel-3, #0c1323);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 8px;
+  color: var(--text, #e6ecff);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.noteTextarea:focus {
+  border-color: var(--brand, #4ba3ff);
+  background: var(--panel-2, #101727);
+}
+
+.noteTextarea::placeholder {
+  color: var(--muted, #9fb0d3);
+  opacity: 0.6;
+}
+
+.footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #24304a);
+}
+
+.savedIndicator {
+  font-size: 12px;
+  color: var(--ok, #47e6a1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Scrollbar customizada (apenas para navegadores Webkit) */
+.notesContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notesContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notesContainer::-webkit-scrollbar-thumb {
+  background: var(--border, #24304a);
+  border-radius: 3px;
+}
+
+.notesContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--muted, #9fb0d3);
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 900px) {
+  .noteTextarea {
+    min-height: 60px;
+  }
+}

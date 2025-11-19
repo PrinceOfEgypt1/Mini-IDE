@@ -1,0 +1,273 @@
+/**
+ * @file ExploreOverview.module.css
+ * @description Estilos para o componente ExploreOverview (aba Overview)
+ */
+
+.exploreOverview {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px;
+}
+
+/* ============================================================================
+   Seções Gerais
+   ============================================================================ */
+
+.section {
+  background: var(--panel-2, #101727);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.badge {
+  background: var(--chip, #222b40);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #9fb0d3);
+}
+
+/* ============================================================================
+   Estado da Sessão
+   ============================================================================ */
+
+.sessionState {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--panel-3, #0c1323);
+  border: 2px solid var(--border, #24304a);
+  border-radius: 10px;
+  transition: border-color 0.3s ease;
+}
+
+.sessionEmoji {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.sessionInfo {
+  flex: 1;
+}
+
+.sessionLabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+  margin-bottom: 4px;
+}
+
+.sessionDescription {
+  font-size: 13px;
+  color: var(--muted, #9fb0d3);
+}
+
+/* Estados específicos */
+.stateDiscovery {
+  border-color: var(--brand, #4ba3ff);
+  background: linear-gradient(135deg, rgba(75, 163, 255, 0.05), var(--panel-3, #0c1323));
+}
+
+.stateExecution {
+  border-color: var(--accent, #00c2a8);
+  background: linear-gradient(135deg, rgba(0, 194, 168, 0.05), var(--panel-3, #0c1323));
+}
+
+.stateReview {
+  border-color: var(--ok, #47e6a1);
+  background: linear-gradient(135deg, rgba(71, 230, 161, 0.05), var(--panel-3, #0c1323));
+}
+
+.stateIdle {
+  border-color: var(--border, #24304a);
+}
+
+/* ============================================================================
+   Projeto Atual
+   ============================================================================ */
+
+.projectCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel-3, #0c1323);
+  border-radius: 8px;
+}
+
+.projectName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text, #e6ecff);
+}
+
+.projectIcon {
+  font-size: 18px;
+}
+
+.projectDetail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.detailLabel {
+  color: var(--muted, #9fb0d3);
+  font-weight: 500;
+  min-width: 90px;
+}
+
+.detailValue {
+  color: var(--text, #e6ecff);
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.branchBadge {
+  background: var(--chip, #222b40);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--ok, #47e6a1);
+}
+
+/* ============================================================================
+   Últimas Análises
+   ============================================================================ */
+
+.analysisList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analysisCard {
+  padding: 12px;
+  background: var(--panel-3, #0c1323);
+  border: 1px solid var(--border, #24304a);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.analysisCard:hover {
+  border-color: var(--brand, #4ba3ff);
+  transform: translateX(2px);
+}
+
+.analysisHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.analysisIcon {
+  font-size: 16px;
+}
+
+.analysisTime {
+  font-size: 12px;
+  color: var(--muted, #9fb0d3);
+}
+
+.analysisSummary {
+  font-size: 14px;
+  color: var(--text, #e6ecff);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.analysisMetrics {
+  display: flex;
+  gap: 12px;
+}
+
+.metric {
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  color: var(--muted, #9fb0d3);
+  background: var(--panel-2, #101727);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ============================================================================
+   Estado Vazio
+   ============================================================================ */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted, #9fb0d3);
+  line-height: 1.6;
+}
+
+.emptyText strong {
+  color: var(--brand, #4ba3ff);
+  font-weight: 600;
+}
+
+/* ============================================================================
+   Responsividade
+   ============================================================================ */
+
+@media (max-width: 900px) {
+  .sessionState {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .sessionEmoji {
+    font-size: 28px;
+  }
+
+  .projectDetail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .detailLabel {
+    min-width: auto;
+  }
+}
