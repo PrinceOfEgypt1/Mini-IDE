@@ -1,7 +1,7 @@
-# Mini-IDE — DEVELOPMENT.md (v1.0.19 – Lote 4 UI Explore Workspace – Feedback visual & toasts)
+# Mini-IDE — DEVELOPMENT.md (v1.0.18 – Lote 3 UI Explore Workspace)
 
 > **Estado de referência deste documento**  
-> Versão lógica: v1.0.19 (Lote 3 + Lote 4 de UI – Explore Workspace)  
+> Versão lógica: v1.0.18 (Lote 3 de UI – Explore Workspace)  
 > Pipeline: `42_pipeline_checklist.sh` passando (lint, test, typecheck, build, smoke /healthz e /analyze).
 
 ---
@@ -183,12 +183,19 @@ Regras imutáveis de governança visual e estrutural:
 
 ---
 
-## 6. Lotes 3 e 4 – Explore Workspace (v1.0.19)
+## 6. Lote 3 – Explore Workspace (v1.0.18)
 
-Os Lotes 3 e 4 consolidam a experiência do **Explore Workspace**, cobrindo:
+Este lote implementa e integra 3 HUs principais na UI, além de consolidar a integração no `WorkspaceTabs`:
 
-- Lote 3: estrutura de Overview, Discovery Notes, Timeline e integração nas abas centrais;
-- Lote 4: **HU-UI-Explore-Interactions-012 – Sistema de Feedback Visual Universal**, com botões padronizados e sistema de toasts.
+> Nota sobre cobertura de HUs
+> O status completo das Histórias de Usuário do projeto (incluindo servidor, qualidade, governança e UI) é mantido no documento
+> `HISTORIAS-USUARIO-PROJETO-MINI-IDE-Documento_em_Uso_Constante.docx`. No momento da release v1.0.18, esse documento registra
+> 18 HUs com status 🟢 Entregue. O presente DEVELOPMENT.md aprofunda apenas as HUs de UI mais relevantes para o épico **E-UI-Explore**
+> e para a experiência visual da Mini-IDE.
+
+- **HU-UI-Discovery-Notes-002 – Discovery Notes Evoluídas**  
+- **HU-UI-Explore-Mode-001 – Modo Explorar com Coleta Automática (Overview)**  
+- **HU-UI-Timeline-003 – Timeline de Exploração (Timeline)**  
 
 ### 6.1 HU-UI-Discovery-Notes-002 — Discovery Notes Evoluídas
 
@@ -388,130 +395,100 @@ Conectar as novas funcionalidades às abas internas do painel central, mantendo 
   - Presença de `ServerStatus` e `AnalyzePlayground` na aba Analyze;  
   - Integração com `App` (layout de 3 colunas + abas).
 
----
 
-### 6.5 HU-UI-Explore-Interactions-012 — Sistema de Feedback Visual Universal
+### 6.4 HU-UI-Explore-Interactions-012 – Sistema de Feedback Visual Universal (Buttons + Toasts)
 
-**Arquivos principais** (Lote 4):
+**Objetivo da HU**  
+Garantir que todas as interações principais da tela Explore Workspace (botões do header, ações do chat e notificações globais)
+tenham feedback visual claro e consistente, reduzindo a sensação de “cliquei e nada aconteceu”.
 
-- Contexto de toasts e provider:
-  - `packages/ui/src/contexts/ToastContext.tsx`
-  - `packages/ui/src/contexts/ToastProvider.tsx`
-  - `packages/ui/src/hooks/useToast.ts`
-- Componentes reutilizáveis:
-  - `packages/ui/src/components/common/Button.tsx`
-  - `packages/ui/src/components/common/Button.module.css`
-  - `packages/ui/src/components/common/Toast.tsx`
-  - `packages/ui/src/components/common/Toast.module.css`
-  - `packages/ui/src/components/common/ToastContainer.tsx`
-  - `packages/ui/src/components/common/ToastContainer.module.css`
-- Integração na aplicação:
-  - `packages/ui/src/App.tsx`
-- Testes:
-  - `packages/ui/test/components/Button.test.tsx`
-  - `packages/ui/test/components/Toast.test.tsx`
-  - `packages/ui/test/hooks/useToast.test.tsx`
-- Script de provisionamento:
-  - `scripts/61_hu_ui_explore_interactions_012.sh`
+Esta HU não muda o layout em si (3 colunas), mas adiciona uma camada de **interatividade e feedback** sobre a UI existente.
 
-**Objetivo**  
-Implementar um **sistema unificado de feedback visual** para o Explore Workspace, garantindo que:
+#### 6.4.1 Arquitetura de componentes
 
-- Todo botão tenha estados claros (idle, hover, active, loading, disabled);
-- Ações relevantes exibam toasts de sucesso/erro/aviso/infomação;
-- O usuário perceba imediatamente que a interface respondeu ao comando.
+Foram introduzidos componentes reutilizáveis e um pequeno subsistema de toasts:
 
-Esta HU conecta diretamente o layout existente (Lote 3) com a sensação de “aplicação viva” descrita na história **HU-UI-Explore-Interactions-012**.
+- `src/contexts/ToastContext.tsx`  
+  - Define o tipo de toast (`success | error | info | warning`) e a interface do contexto.  
+  - Expõe funções para disparar toasts globais (por exemplo, `showSuccess`, `showError`).
 
-#### 6.5.1 Sistema de toasts
+- `src/contexts/ToastProvider.tsx`  
+  - Componente responsável por manter a fila de toasts em estado React.  
+  - Renderiza o `ToastContainer` com base no estado atual.  
+  - Deve envolver a árvore de UI em `main.tsx` ou no ponto de entrada da aplicação.
 
-O sistema de toasts é composto por:
+- `src/hooks/useToast.ts`  
+  - Hook customizado que encapsula o acesso ao contexto.  
+  - É a API que os componentes de UI utilizam para disparar notificações, sem conhecer detalhes de implementação.
 
-- **Contexto** (`ToastContext`) definindo a API pública:
-  - `showSuccess(message: string)`;
-  - `showError(message: string)`;
-  - `showInfo(message: string)`;
-  - `showWarning(message: string)`;
-  - além de uma função genérica `addToast` (tipada) usada internamente.
+- `src/components/common/Button.tsx` / `Button.module.css`  
+  - Componente de botão padronizado com variantes (`primary`, `secondary`, `ghost`) e estados visuais:
+    - idle, hover, active, disabled, loading.  
+  - Centraliza as regras de UX de botões da Mini-IDE, evitando divergência de estilos.
 
-- **Provider** (`ToastProvider`) responsável por:
-  - Manter a fila de toasts em memória (estado React);
-  - Atribuir IDs estáveis para remoção;
-  - Respeitar limite máximo de toasts visíveis simultaneamente;
-  - Aplicar timeouts diferentes para cada tipo (ex.: sucesso mais curto, erro mais longo).
+- `src/components/common/Toast.tsx` / `Toast.module.css`  
+  - Renderiza um toast individual com:
+    - Ícone por tipo (sucesso, erro, aviso, info),  
+    - Mensagem,  
+    - Botão de fechar acessível,  
+    - Animações suaves de entrada/saída.
 
-- **Hook** (`useToast`) que:
-  - Encapsula o acesso ao contexto;
-  - Expõe helpers de alto nível (`showSuccess`, `showError`, etc.);
-  - Garante erro explícito se usado fora de um `ToastProvider`.
+- `src/components/common/ToastContainer.tsx` / `ToastContainer.module.css`  
+  - Empilha múltiplos toasts (limite configurável, ex.: 3 simultâneos).  
+  - Define a posição na tela (por padrão, canto superior direito) e o espaçamento entre notificações.
 
-- **Componentes visuais**:
-  - `ToastContainer` — ancora os toasts (ex.: canto superior direito da viewport);
-  - `Toast` — renderiza cada toast individual, com:
-    - Ícone por tipo;
-    - Título/mensagem;
-    - Botão de fechar;
-    - Animações suaves de entrada/saída via CSS.
+#### 6.4.2 Integrações na tela principal (App.tsx)
 
-O `ToastProvider` envolve a árvore principal da UI (via `App.tsx`), e o `ToastContainer` é renderizado próximo à raiz para não interferir no layout do Explore Workspace.
+O `App.tsx` foi ajustado para:
 
-#### 6.5.2 Componente de botão padronizado
+1. Envolver toda a aplicação com o `ToastProvider`, garantindo que qualquer componente dentro da árvore possa disparar toasts.  
+2. Substituir, de forma incremental, botões nativos (`<button>`) por `Button` nas áreas mais importantes (header e footer), respeitando o layout existente.
 
-O componente `Button` substitui o uso direto de `<button>` em pontos-chave da UI, fornecendo:
+O rodapé (chat) passa a ter:
 
-- **Variantes** (`variant`):
-  - `primary` — ações principais (ex.: **Executar**);
-  - `secondary` — ações de suporte (ex.: **Provisionar**, **Anexar**);
-  - `ghost` — ações menos intrusivas / secundárias;
-  - (Espaço para futuras variantes, como `danger`).
+- Botão **Enviar** com suporte a estado de carregamento (`isLoading`) e desabilitado (`disabled`).  
+- Integração com `useToast` para exibir mensagens de sucesso ou erro após o envio de uma “mensagem” (no momento, simulação controlada).
 
-- **Tamanhos** (`size`):
-  - `sm`, `md`, `lg` (com tokens de espaçamento/padding consistentes).
+#### 6.4.3 Testes automatizados
 
-- **Estados**:
-  - `isLoading` — exibe spinner e desabilita clique;
-  - `disabled` — desabilita interação, aplica cursor `not-allowed`;
-  - Suporte a `leftIcon`/`rightIcon` via children opcionais.
+Foram adicionados testes mínimos para garantir que a infraestrutura de toasts e botões não quebre a pipeline:
 
-A implementação usa **CSS Modules** (`Button.module.css`) para garantir:
+- `test/components/Button.test.tsx`  
+  - Verifica renderização básica e suporte a `onClick`.  
 
-- Estados `:hover`, `:active`, `:focus-visible`;
-- Animações de transição (150–200ms) entre estados;
-- Contraste adequado para acessibilidade (WCAG 2.1 AA).
+- `test/components/Toast.test.tsx`  
+  - Garante que um toast simples é renderizado com mensagem e botão de fechar.  
 
-#### 6.5.3 Integração em App.tsx
+- `test/hooks/useToast.test.tsx`  
+  - Valida que o hook pode ser usado dentro de um `ToastProvider` sem lançar erros.
 
-O `App.tsx` passa a:
+A ideia é que testes mais ricos (por exemplo, cenários de integração com Analyze, Timeline ou erros reais de rede) sejam adicionados em HUs futuras
+(HU-UI-Explore-Error-Handling-016, HU-UI-Explore-Loading-States-017, etc.).
 
-1. Envolver o conteúdo principal em `<ToastProvider>`, garantindo que todos os componentes abaixo possam disparar toasts;
-2. Renderizar `<ToastContainer />` em um nível alto da árvore, sem interferir na composição das 3 colunas;
-3. Utilizar o componente `Button` nos pontos centrais de interação:
-   - **Header**: botões *Provisionar*, *Executar*, *Quick Start*;
-   - **Footer**: botões *Anexar* e *Enviar*.
+#### 6.4.4 Principais decisões de UX
 
-O footer do chat passa a:
+- **Feedback imediato:** clique em botões relevantes deve sempre gerar alguma reação perceptível (estado active, loading ou toast).  
+- **Não intrusivo:** toasts aparecem em overlay, mas não bloqueiam a interação com o restante da UI.  
+- **Consistência:** os mesmos padrões de cor, tipografia e animação são usados em todos os botões/toasts do sistema.  
+- **Acessibilidade:** foco visível em botões, uso de `aria-live` apropriado em toasts (quando aplicável) e respeito à navegação por teclado.
 
-- Validar o conteúdo da textarea antes de “enviar”;
-- Exibir toasts diferentes conforme o cenário (por exemplo, erro se a mensagem estiver vazia);
-- Bloquear múltiplos cliques enquanto `isLoading` estiver ativo (debounce simples).
+#### 6.4.5 Próximos passos relacionados
 
-> Importante: nesta fase, a HU foca no **feedback visual e estrutural** (botões + toasts). A integração com chamadas reais a `/analyze` continua encapsulada em componentes específicos (como `AnalyzePlayground`), que poderão reutilizar o mesmo sistema de toasts em HUs futuras.
+Esta HU prepara o terreno para outras HUs de UI já definidas no documento oficial de HUs, como:
 
-#### 6.5.4 Testes e script de provisionamento
+- HU-UI-Explore-Empty-States-013 – Estados vazios informativos e acionáveis.  
+- HU-UI-Explore-Keyboard-Nav-014 – Navegação completa por teclado.  
+- HU-UI-Explore-Accessibility-015 – Conformidade com WCAG 2.1 AA.  
+- HU-UI-Explore-Error-Handling-016 – Tratamento unificado de erros.  
+- HU-UI-Explore-Loading-States-017 – Estados de carregamento claros e previsíveis.  
+- HU-UI-Explore-Micro-Interactions-018 – Micro-interações e polimento final.
 
-- Testes unitários mínimos garantem que:
-  - `useToast` exponha a API esperada e lance erro fora do provider;
-  - `Button` respeite `variant`, `size` e estado `isLoading`;
-  - `Toast` renderize conteúdo e chame o callback de fechamento.
+Estas HUs devem, no futuro, complementar o sistema de feedback visual introduzido aqui, mantendo a interface da Mini-IDE coesa, responsiva e agradável de usar.
 
-- O script `scripts/61_hu_ui_explore_interactions_012.sh` permite:
-  - Recriar rapidamente todos os arquivos da HU a partir de um estado conhecido;
-  - Facilitar auditorias e restauração em caso de experimentos malsucedidos;
-  - Manter o estilo “infra-as-code” também para a UI.
 
 ---
 
-## 7. Qualidade e estado da release v1.0.19 (UI Lotes 3 + 4)
+## 7. Qualidade e estado da release v1.0.18 (UI Lote 3)
 
 Para o estado atual descrito neste documento:
 
@@ -523,41 +500,29 @@ Para o estado atual descrito neste documento:
   - ✅ Smoke `/healthz` — OK  
   - ✅ Smoke `/analyze` — contrato respeitado
 
-- `pnpm -r test` (valores aproximados, pois podem evoluir com novas HUs)  
+- `pnpm -r test`  
   - `@mini-ide/shared` — 47 testes passando  
-  - `@mini-ide/ui` — **56 testes passando** (incluindo Button/Toast/useToast)  
+  - `@mini-ide/ui` — 50 testes passando  
   - `@mini-ide/analysis-agent` — 1 teste passando  
   - `@mini-ide/cli` — 2 testes passando  
   - `@mini-ide/server` — 65 testes passando  
 
-Este é o **ponto de restauração lógico** da release v1.0.19 com o **Lote 3 + Lote 4 do Explore Workspace** implementados e validados.
+Este é o **ponto de restauração lógico** da release v1.0.18 com o **Lote 3 do Explore Workspace** implementado e validado.
 
 ---
 
 ## 8. Próximos passos sugeridos (UI)
 
-Fora do escopo implementado nestes lotes, ficam como backlog de UI (já discutidos conceitualmente nas HUs):
+Fora do escopo implementado neste lote, ficam como backlog de UI (já discutidos conceitualmente):
 
-- **HU-UI-Explore-Tabs-Minimum-Content-011 – Conteúdos mínimos e estados vazios nas abas**
-  - Preencher cada aba com conteúdo mínimo ou estado vazio explicativo, alinhado ao documento de HUs.
+- **HU-UI-Export-005 — Exportar Sessão de Exploração**
+  - Exportar notas, timeline e último resultado de `/analyze` em Markdown/JSON.
 
-- **HU-UI-Explore-Empty-States-013 – Estados Vazios Informativos e Acionáveis**
-  - Estados vazios mais ricos e guiados em abas ainda sem dados reais.
+- **HU-UI-Workspace-State-Persistence-006 — Persistência do Workspace**
+  - Persistir aba ativa, conteúdo das Discovery Notes (já parcialmente feito) e último input do Analyze.
 
-- **HU-UI-Explore-Keyboard-Nav-014 – Navegação Completa por Teclado**
-  - Garantir que todo o Explore Workspace seja 100% utilizável por teclado.
-
-- **HU-UI-Explore-Accessibility-015 – Conformidade WCAG 2.1 AA**
-  - Elevar a UI para um patamar de acessibilidade robusto (contraste, foco visível, ARIA, etc.).
-
-- **HU-UI-Explore-Error-Handling-016 – Tratamento Unificado de Erros**
-  - Padronizar mensagens, toasts e estados visuais de erro em toda a UI.
-
-- **HU-UI-Explore-Loading-States-017 – Estados de Carregamento**
-  - Padronizar skeletons, spinners e feedback de carregamento por tela/aba.
-
-- **HU-UI-Explore-Micro-Interactions-018 – Micro-interações e Polimento**
-  - Micro-animações, transições suaves e detalhes de polimento visual.
+- **HU-UI-Theme-System-007 — Sistema de Tema Claro/Escuro**
+  - Implementar toggle de tema no header, com persistência em storage.
 
 Qualquer implementação futura deve:
 
