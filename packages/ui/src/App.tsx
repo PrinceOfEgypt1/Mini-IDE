@@ -1,17 +1,61 @@
+// packages/ui/src/App.tsx
+import type React from 'react';
+import { useCallback, useState } from 'react';
 import { Sidebar } from './components/Sidebar.js';
 import { WorkspaceTabs } from './components/WorkspaceTabs.js';
 import { DiscoveryNotes } from './components/DiscoveryNotes.js';
+import { ToastProvider } from './contexts/ToastProvider.js';
+import { useToast } from './hooks/useToast.js';
+import { Button } from './components/common/Button.js';
 import styles from './App.module.css';
 
 /**
- * App - Componente principal da Mini-IDE UI
+ * AppLayout - Conteúdo principal da Mini-IDE UI.
  *
- * Implementa o layout base de 3 colunas conforme wireframe MiniIDE-Explore.html:
- * - Sidebar esquerda: árvore do projeto
- * - Painel central: abas internas (Overview, HUs, Docs, Analyze, etc.)
- * - Painel direito: Discovery Notes
+ * Este componente assume que está sendo renderizado DENTRO de um ToastProvider.
  */
-function App() {
+function AppLayout() {
+  const { showSuccess, showError, showInfo } = useToast();
+  const [chatMessage, setChatMessage] = useState('');
+
+  const handleProvision = useCallback(() => {
+    showInfo('Provisionamento de workspace ainda será implementado.');
+  }, [showInfo]);
+
+  const handleExecute = useCallback(() => {
+    showSuccess('Execução disparada (mock). Pipeline de agentes será conectado futuramente.');
+  }, [showSuccess]);
+
+  const handleQuickStart = useCallback(() => {
+    showSuccess('Quick Start: carregando fluxo guiado (mock).');
+  }, [showSuccess]);
+
+  const handleAttach = useCallback(() => {
+    showInfo('Funcionalidade de anexar arquivos ainda será conectada.');
+  }, [showInfo]);
+
+  const handleSend = useCallback(() => {
+    const trimmed = chatMessage.trim();
+
+    if (!trimmed) {
+      showError('Digite uma mensagem antes de enviar.');
+      return;
+    }
+
+    showSuccess('Mensagem enviada ao Analysis Agent (mock).');
+    setChatMessage('');
+  }, [chatMessage, showError, showSuccess]);
+
+  const handleChatKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement> = useCallback(
+    (event) => {
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend],
+  );
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
@@ -21,9 +65,15 @@ function App() {
           <span className={styles.badgeOk}>Explorando</span>
         </div>
         <div className={styles.headerRight}>
-          <button className={styles.btn}>Provisionar</button>
-          <button className={styles.btnPrimary}>Executar</button>
-          <button className={styles.btn}>Quick Start</button>
+          <Button variant="secondary" onClick={handleProvision}>
+            Provisionar
+          </Button>
+          <Button variant="primary" onClick={handleExecute}>
+            Executar
+          </Button>
+          <Button variant="secondary" onClick={handleQuickStart}>
+            Quick Start
+          </Button>
         </div>
       </header>
 
@@ -46,13 +96,31 @@ function App() {
           className={styles.chatInput}
           placeholder="Digite em linguagem natural… (Ctrl+Enter para enviar)"
           rows={3}
+          value={chatMessage}
+          onChange={(event) => setChatMessage(event.target.value)}
+          onKeyDown={handleChatKeyDown}
         />
         <div className={styles.footerActions}>
-          <button className={styles.btn}>Anexar</button>
-          <button className={styles.btnPrimary}>Enviar</button>
+          <Button variant="secondary" onClick={handleAttach}>
+            Anexar
+          </Button>
+          <Button variant="primary" onClick={handleSend}>
+            Enviar
+          </Button>
         </div>
       </footer>
     </div>
+  );
+}
+
+/**
+ * App - Entry point da UI, encapsulada pelo ToastProvider.
+ */
+function App() {
+  return (
+    <ToastProvider>
+      <AppLayout />
+    </ToastProvider>
   );
 }
 

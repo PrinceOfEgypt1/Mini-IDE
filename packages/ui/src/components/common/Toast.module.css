@@ -1,0 +1,57 @@
+/* packages/ui/src/components/common/Toast.module.css */
+
+.toast {
+  min-width: 260px;
+  max-width: 360px;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #f9fafb;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.icon {
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
+.message {
+  flex: 1;
+  line-height: 1.3;
+}
+
+/* Tipos */
+
+.success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.error {
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+}
+
+.warning {
+  background: linear-gradient(135deg, #a16207, #eab308);
+}
+
+.info {
+  background: linear-gradient(135deg, #0369a1, #0ea5e9);
+}
+
+.closeButton {
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.closeButton:hover {
+  opacity: 1;
+}
