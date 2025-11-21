@@ -1,7 +1,7 @@
-# Mini-IDE — DEVELOPMENT.md (v1.0.18 – Lote 3 UI Explore Workspace)
+# Mini-IDE — DEVELOPMENT.md (v1.0.19 – Lote 4 UI Explore Workspace – Feedback visual & toasts)
 
 > **Estado de referência deste documento**  
-> Versão lógica: v1.0.18 (Lote 3 de UI – Explore Workspace)  
+> Versão lógica: v1.0.19 (Lote 3 + Lote 4 de UI – Explore Workspace)  
 > Pipeline: `42_pipeline_checklist.sh` passando (lint, test, typecheck, build, smoke /healthz e /analyze).
 
 ---
@@ -53,11 +53,11 @@ Scripts globais relevantes na raiz:
 
 ## 3. Tooling e padrões de qualidade
 
-- **Gerenciador de pacotes:** `pnpm`
-- **Lint:** `eslint` com configuração por pacote (incluindo `packages/ui/eslint.config.js`).
-- **Testes:** `vitest` com `jsdom` para testes de UI.
-- **Build UI:** `vite build` via script `@mini-ide/ui: build`.
-- **Type-check:** `tsc --noEmit` por pacote.
+- **Gerenciador de pacotes:** `pnpm`  
+- **Lint:** `eslint` com configuração por pacote (incluindo `packages/ui/eslint.config.js`).  
+- **Testes:** `vitest` com `jsdom` para testes de UI.  
+- **Build UI:** `vite build` via script `@mini-ide/ui: build`.  
+- **Type-check:** `tsc --noEmit` por pacote.  
 - **Husky / pre-commit:** hooks garantindo que commits passem pelos checks mínimos (lint, typecheck filtrado).
 
 O pipeline de validação recomendado:
@@ -81,10 +81,10 @@ Que executa, nesta ordem:
 
 ### 4.1 Endpoint GET /healthz
 
-- Retorna 200 quando o servidor está saudável.
-- Usado pela UI (ServerStatus) para exibir estado:
-  - ⏳ verificando;
-  - 🟢 servidor online;
+- Retorna 200 quando o servidor está saudável.  
+- Usado pela UI (ServerStatus) para exibir estado:  
+  - ⏳ verificando;  
+  - 🟢 servidor online;  
   - 🔴 servidor indisponível.
 
 ### 4.2 Endpoint POST /analyze
@@ -115,7 +115,7 @@ A UI consome esse contrato via `AnalyzePlayground`, exibindo a resposta de forma
 
 Configuração do backend na UI:
 
-- Arquivo: `packages/ui/src/config/server.ts`
+- Arquivo: `packages/ui/src/config/server.ts`  
 - Usa a env `VITE_MINI_IDE_SERVER_URL` como base para:
   - `getBaseUrl()`
   - `getHealthzUrl()`
@@ -125,71 +125,70 @@ Configuração do backend na UI:
 
 O layout do Explore Workspace segue **estritamente** o wireframe oficial `MiniIDE-Explore.html` e as regras estabelecidas na governança da UI:
 
-- **Coluna esquerda (~280px)** — `Sidebar`
-  - Projeto atual (nome, repo, branch);
-  - Árvore de arquivos (placeholder para evolução futura);
+- **Coluna esquerda (~280px)** — `Sidebar`  
+  - Projeto atual (nome, repo, branch);  
+  - Árvore de arquivos (placeholder para evolução futura);  
   - Status do projeto / sessão.
 
-- **Coluna central (expansível)** — `WorkspaceTabs`
+- **Coluna central (expansível)** — `WorkspaceTabs`  
   - 10 abas internas:
-    1. Overview
-    2. HUs
-    3. Docs
-    4. Testes
-    5. Analyze
-    6. Personas & Plano
-    7. Timeline
-    8. Runs
-    9. Métricas
+    1. Overview  
+    2. HUs  
+    3. Docs  
+    4. Testes  
+    5. Analyze  
+    6. Personas & Plano  
+    7. Timeline  
+    8. Runs  
+    9. Métricas  
     10. Outputs
 
-- **Coluna direita (~360px)** — `DiscoveryNotes`
-  - Intenção;
-  - Requisitos;
-  - Restrições;
+- **Coluna direita (~360px)** — `DiscoveryNotes`  
+  - Intenção;  
+  - Requisitos;  
+  - Restrições;  
   - Exemplos & Referências.
 
 Header e footer:
 
-- **Header**: título da Mini-IDE, contexto da sessão, badges de agente (ex.: _Analysis Agent_), estado de exploração.
+- **Header**: título da Mini-IDE, contexto da sessão, badges de agente (ex.: *Analysis Agent*), estado de exploração.  
 - **Footer**: área de chat (textarea) + botões de ação (Anexar, Enviar, etc.).
 
 ### 5.3 Governança da UI — Explore Workspace (seção 5.6.5 lógica)
 
 Regras imutáveis de governança visual e estrutural:
 
-1. **Layout de 3 colunas é fixo**
+1. **Layout de 3 colunas é fixo**  
    - Não é permitido substituir o layout por modo “tela cheia” ou “multi-layout” sem HU explícita de redesign.
 
-2. **Wireframe como fonte de verdade visual**
-   - `MiniIDE-Explore.html` é referência obrigatória para espaçamento, proporções e organização dos painéis.
+2. **Wireframe como fonte de verdade visual**  
+   - `MiniIDE-Explore.html` é referência obrigatória para espaçamento, proporções e organização dos painéis.  
    - Toda HU de UI deve declarar:
      - O que mantém igual ao wireframe;
      - O que adiciona;
      - Qualquer divergência necessária (com justificativa).
 
-3. **Integração incremental**
+3. **Integração incremental**  
    - Novas features devem ser plugadas em:
-     - `Sidebar` (coluna esquerda),
-     - `WorkspaceTabs` (coluna central),
+     - `Sidebar` (coluna esquerda),  
+     - `WorkspaceTabs` (coluna central),  
      - `DiscoveryNotes` (coluna direita),  
-       sem destruir a estrutura base.
+     sem destruir a estrutura base.
 
-4. **Integração com backend**
+4. **Integração com backend**  
    - Toda integração com `/healthz` e `/analyze` deve respeitar:
-     - Tipagem de `@mini-ide/shared`;
-     - Tratamento de erros amigável na UI;
+     - Tipagem de `@mini-ide/shared`;  
+     - Tratamento de erros amigável na UI;  
      - Não quebrar o pipeline (`pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm build`).
 
 ---
 
-## 6. Lote 3 – Explore Workspace (v1.0.18)
+## 6. Lotes 3 e 4 – Explore Workspace (v1.0.19)
 
-Este lote implementa e integra 3 HUs principais na UI, além de consolidar a integração no `WorkspaceTabs`:
+Os Lotes 3 e 4 consolidam a experiência do **Explore Workspace**, cobrindo:
 
-- **HU-UI-Discovery-Notes-002 – Discovery Notes Evoluídas**
-- **HU-UI-Explore-Mode-001 – Modo Explorar com Coleta Automática (Overview)**
-- **HU-UI-Timeline-003 – Timeline de Exploração (Timeline)**
+- Lote 3: estrutura de Overview, Discovery Notes, Timeline e integração nas abas centrais;
+- Lote 4: **HU-UI-Explore-Interactions-012 – Sistema de Feedback Visual Universal**, com botões padronizados e sistema de toasts.
 
 ### 6.1 HU-UI-Discovery-Notes-002 — Discovery Notes Evoluídas
 
@@ -203,9 +202,9 @@ Este lote implementa e integra 3 HUs principais na UI, além de consolidar a int
 Transformar o painel direito em um **editor assistido** de notas de descoberta, com:
 
 - Campos editáveis:
-  - Intenção
-  - Requisitos
-  - Restrições
+  - Intenção  
+  - Requisitos  
+  - Restrições  
   - Exemplos & Referências
 - Persistência local no navegador (storage estilo `localStorage`), sem quebrar SSR ou ambientes sem DOM.
 
@@ -254,17 +253,17 @@ Transformar o painel direito em um **editor assistido** de notas de descoberta, 
 
 **Regras importantes**
 
-- Nenhum uso direto de `window` ou `localStorage` sem checagem;
-- Nenhum `eslint-disable` residual (lint limpo);
+- Nenhum uso direto de `window` ou `localStorage` sem checagem;  
+- Nenhum `eslint-disable` residual (lint limpo);  
 - Layout do painel direito (~360px) preservado, sem impactar as demais colunas.
 
 **Testes**
 
 - Cobrem:
-  - Renderização inicial;
-  - Edição de cada campo;
-  - Persistência com storage disponível;
-  - Comportamento sem storage (fallback seguro);
+  - Renderização inicial;  
+  - Edição de cada campo;  
+  - Persistência com storage disponível;  
+  - Comportamento sem storage (fallback seguro);  
   - Acessibilidade básica (labels, aria-labels).
 
 ---
@@ -280,32 +279,33 @@ Transformar o painel direito em um **editor assistido** de notas de descoberta, 
 **Objetivo**  
 Transformar a aba **Overview** em um painel de estado da sessão, exibindo:
 
-- **Estado da sessão**: `Discovery`, `Execution`, `Review` ou `Idle`;
+- **Estado da sessão**: `Discovery`, `Execution`, `Review` ou `Idle`;  
 - Informações do **projeto atual**:
-  - Nome do projeto;
-  - Repositório;
-  - Branch;
-  - Caminho local (quando relevante);
+  - Nome do projeto;  
+  - Repositório;  
+  - Branch;  
+  - Caminho local (quando relevante);  
 - **Últimas análises** (mockadas nesta versão):
-  - Timestamp da execução;
-  - Resumo curto;
+  - Timestamp da execução;  
+  - Resumo curto;  
   - Referência ao `requestId` ou similar.
 
 **Implementação**
 
 - Componente `ExploreOverview` recebe (hoje) dados mockados, com tipagem clara para futura integração real.
 - Layout respeita o wireframe, com:
-  - Bloco superior de “estado da sessão”;
-  - Bloco de “projeto atual”;
+
+  - Bloco superior de “estado da sessão”;  
+  - Bloco de “projeto atual”;  
   - Lista de “últimas análises”.
 
 **Testes**
 
 - Validam:
-  - Renderização com valores padrão;
-  - Renderização de cada estado de sessão;
-  - Exibição das informações básicas do projeto;
-  - Exibição da lista de análises;
+  - Renderização com valores padrão;  
+  - Renderização de cada estado de sessão;  
+  - Exibição das informações básicas do projeto;  
+  - Exibição da lista de análises;  
   - Estrutura e acessibilidade.
 
 ---
@@ -323,10 +323,10 @@ Criar uma **timeline cronológica de eventos** da sessão, exibida na aba **Time
 
 Tipos de eventos suportados (mock inicial):
 
-- `analysis` — chamadas a `/analyze`;
-- `discovery` — atualizações de Discovery Notes;
-- `project` — mudanças de branch / contexto de projeto;
-- `execution` — execuções de pipelines / scripts;
+- `analysis` — chamadas a `/analyze`;  
+- `discovery` — atualizações de Discovery Notes;  
+- `project` — mudanças de branch / contexto de projeto;  
+- `execution` — execuções de pipelines / scripts;  
 - `system` — eventos de sistema / housekeeping.
 
 **Implementação**
@@ -334,20 +334,20 @@ Tipos de eventos suportados (mock inicial):
 - Ordenação dos eventos do mais recente para o mais antigo;
 - Filtros por tipo de evento (múltipla seleção);
 - Cada evento exibe:
-  - Ícone e cor por tipo;
-  - Título curto;
-  - Descrição opcional;
-  - Data/hora absoluta (`HH:MM:SS`);
+  - Ícone e cor por tipo;  
+  - Título curto;  
+  - Descrição opcional;  
+  - Data/hora absoluta (`HH:MM:SS`);  
   - Tempo relativo (“X min atrás”).
 
 **Testes**
 
 - Validam:
-  - Renderização da lista de eventos;
-  - Ordenação correta (mais recente primeiro);
-  - Aplicação de filtros por tipo;
-  - Estado vazio quando não há eventos;
-  - Formatação de timestamp e tempo relativo;
+  - Renderização da lista de eventos;  
+  - Ordenação correta (mais recente primeiro);  
+  - Aplicação de filtros por tipo;  
+  - Estado vazio quando não há eventos;  
+  - Formatação de timestamp e tempo relativo;  
   - Acessibilidade básica.
 
 ---
@@ -358,7 +358,7 @@ Tipos de eventos suportados (mock inicial):
 
 - `packages/ui/src/components/WorkspaceTabs.tsx`
 - `packages/ui/src/components/WorkspaceTabs.module.css`
-- Testes: `packages/ui/test/components/WorkspaceTabs.test.tsx`
+- Testes: `packages/ui/test/components/WorkspaceTabs.test.tsx`  
 - Integração com `App.tsx` e layout geral.
 
 **Objetivo**  
@@ -366,72 +366,206 @@ Conectar as novas funcionalidades às abas internas do painel central, mantendo 
 
 **Mapeamento das abas**
 
-- `overview` → `ExploreOverview`
-- `analyze` → `ServerStatus` + `AnalyzePlayground`
-- `timeline` → `ExploreTimeline`
+- `overview` → `ExploreOverview`  
+- `analyze` → `ServerStatus` + `AnalyzePlayground`  
+- `timeline` → `ExploreTimeline`  
 - `hus`, `docs`, `tests`, `personas`, `runs`, `metrics`, `outputs` → placeholders amigáveis, preparados para evolução futura.
 
 **Comportamento padrão**
 
-- Aba inicial: `overview`;
+- Aba inicial: `overview`;  
 - Clique em uma aba:
-  - Atualiza o estado interno `activeTab`;
-  - Aplica classe CSS de aba ativa;
+  - Atualiza o estado interno `activeTab`;  
+  - Aplica classe CSS de aba ativa;  
   - Renderiza apenas o conteúdo da aba selecionada.
 
 **Testes**
 
 - Verificam:
-  - Renderização das 10 abas;
-  - Aba Overview ativa por padrão;
-  - Troca para aba Analyze ao clique;
-  - Presença de `ServerStatus` e `AnalyzePlayground` na aba Analyze;
+  - Renderização das 10 abas;  
+  - Aba Overview ativa por padrão;  
+  - Troca para aba Analyze ao clique;  
+  - Presença de `ServerStatus` e `AnalyzePlayground` na aba Analyze;  
   - Integração com `App` (layout de 3 colunas + abas).
 
 ---
 
-## 7. Qualidade e estado da release v1.0.18 (UI Lote 3)
+### 6.5 HU-UI-Explore-Interactions-012 — Sistema de Feedback Visual Universal
+
+**Arquivos principais** (Lote 4):
+
+- Contexto de toasts e provider:
+  - `packages/ui/src/contexts/ToastContext.tsx`
+  - `packages/ui/src/contexts/ToastProvider.tsx`
+  - `packages/ui/src/hooks/useToast.ts`
+- Componentes reutilizáveis:
+  - `packages/ui/src/components/common/Button.tsx`
+  - `packages/ui/src/components/common/Button.module.css`
+  - `packages/ui/src/components/common/Toast.tsx`
+  - `packages/ui/src/components/common/Toast.module.css`
+  - `packages/ui/src/components/common/ToastContainer.tsx`
+  - `packages/ui/src/components/common/ToastContainer.module.css`
+- Integração na aplicação:
+  - `packages/ui/src/App.tsx`
+- Testes:
+  - `packages/ui/test/components/Button.test.tsx`
+  - `packages/ui/test/components/Toast.test.tsx`
+  - `packages/ui/test/hooks/useToast.test.tsx`
+- Script de provisionamento:
+  - `scripts/61_hu_ui_explore_interactions_012.sh`
+
+**Objetivo**  
+Implementar um **sistema unificado de feedback visual** para o Explore Workspace, garantindo que:
+
+- Todo botão tenha estados claros (idle, hover, active, loading, disabled);
+- Ações relevantes exibam toasts de sucesso/erro/aviso/infomação;
+- O usuário perceba imediatamente que a interface respondeu ao comando.
+
+Esta HU conecta diretamente o layout existente (Lote 3) com a sensação de “aplicação viva” descrita na história **HU-UI-Explore-Interactions-012**.
+
+#### 6.5.1 Sistema de toasts
+
+O sistema de toasts é composto por:
+
+- **Contexto** (`ToastContext`) definindo a API pública:
+  - `showSuccess(message: string)`;
+  - `showError(message: string)`;
+  - `showInfo(message: string)`;
+  - `showWarning(message: string)`;
+  - além de uma função genérica `addToast` (tipada) usada internamente.
+
+- **Provider** (`ToastProvider`) responsável por:
+  - Manter a fila de toasts em memória (estado React);
+  - Atribuir IDs estáveis para remoção;
+  - Respeitar limite máximo de toasts visíveis simultaneamente;
+  - Aplicar timeouts diferentes para cada tipo (ex.: sucesso mais curto, erro mais longo).
+
+- **Hook** (`useToast`) que:
+  - Encapsula o acesso ao contexto;
+  - Expõe helpers de alto nível (`showSuccess`, `showError`, etc.);
+  - Garante erro explícito se usado fora de um `ToastProvider`.
+
+- **Componentes visuais**:
+  - `ToastContainer` — ancora os toasts (ex.: canto superior direito da viewport);
+  - `Toast` — renderiza cada toast individual, com:
+    - Ícone por tipo;
+    - Título/mensagem;
+    - Botão de fechar;
+    - Animações suaves de entrada/saída via CSS.
+
+O `ToastProvider` envolve a árvore principal da UI (via `App.tsx`), e o `ToastContainer` é renderizado próximo à raiz para não interferir no layout do Explore Workspace.
+
+#### 6.5.2 Componente de botão padronizado
+
+O componente `Button` substitui o uso direto de `<button>` em pontos-chave da UI, fornecendo:
+
+- **Variantes** (`variant`):
+  - `primary` — ações principais (ex.: **Executar**);
+  - `secondary` — ações de suporte (ex.: **Provisionar**, **Anexar**);
+  - `ghost` — ações menos intrusivas / secundárias;
+  - (Espaço para futuras variantes, como `danger`).
+
+- **Tamanhos** (`size`):
+  - `sm`, `md`, `lg` (com tokens de espaçamento/padding consistentes).
+
+- **Estados**:
+  - `isLoading` — exibe spinner e desabilita clique;
+  - `disabled` — desabilita interação, aplica cursor `not-allowed`;
+  - Suporte a `leftIcon`/`rightIcon` via children opcionais.
+
+A implementação usa **CSS Modules** (`Button.module.css`) para garantir:
+
+- Estados `:hover`, `:active`, `:focus-visible`;
+- Animações de transição (150–200ms) entre estados;
+- Contraste adequado para acessibilidade (WCAG 2.1 AA).
+
+#### 6.5.3 Integração em App.tsx
+
+O `App.tsx` passa a:
+
+1. Envolver o conteúdo principal em `<ToastProvider>`, garantindo que todos os componentes abaixo possam disparar toasts;
+2. Renderizar `<ToastContainer />` em um nível alto da árvore, sem interferir na composição das 3 colunas;
+3. Utilizar o componente `Button` nos pontos centrais de interação:
+   - **Header**: botões *Provisionar*, *Executar*, *Quick Start*;
+   - **Footer**: botões *Anexar* e *Enviar*.
+
+O footer do chat passa a:
+
+- Validar o conteúdo da textarea antes de “enviar”;
+- Exibir toasts diferentes conforme o cenário (por exemplo, erro se a mensagem estiver vazia);
+- Bloquear múltiplos cliques enquanto `isLoading` estiver ativo (debounce simples).
+
+> Importante: nesta fase, a HU foca no **feedback visual e estrutural** (botões + toasts). A integração com chamadas reais a `/analyze` continua encapsulada em componentes específicos (como `AnalyzePlayground`), que poderão reutilizar o mesmo sistema de toasts em HUs futuras.
+
+#### 6.5.4 Testes e script de provisionamento
+
+- Testes unitários mínimos garantem que:
+  - `useToast` exponha a API esperada e lance erro fora do provider;
+  - `Button` respeite `variant`, `size` e estado `isLoading`;
+  - `Toast` renderize conteúdo e chame o callback de fechamento.
+
+- O script `scripts/61_hu_ui_explore_interactions_012.sh` permite:
+  - Recriar rapidamente todos os arquivos da HU a partir de um estado conhecido;
+  - Facilitar auditorias e restauração em caso de experimentos malsucedidos;
+  - Manter o estilo “infra-as-code” também para a UI.
+
+---
+
+## 7. Qualidade e estado da release v1.0.19 (UI Lotes 3 + 4)
 
 Para o estado atual descrito neste documento:
 
-- `REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh`
-  - ✅ Lint — passou
-  - ✅ Type-check — passou
-  - ✅ Testes (Vitest) — passaram em todos os pacotes
-  - ✅ Build — passou em todos os pacotes
-  - ✅ Smoke `/healthz` — OK
+- `REQUIRE_GLOBAL_CLI=0 bash ./42_pipeline_checklist.sh`  
+  - ✅ Lint — passou  
+  - ✅ Type-check — passou  
+  - ✅ Testes (Vitest) — passaram em todos os pacotes  
+  - ✅ Build — passou em todos os pacotes  
+  - ✅ Smoke `/healthz` — OK  
   - ✅ Smoke `/analyze` — contrato respeitado
 
-- `pnpm -r test`
-  - `@mini-ide/shared` — 47 testes passando
-  - `@mini-ide/ui` — 50 testes passando
-  - `@mini-ide/analysis-agent` — 1 teste passando
-  - `@mini-ide/cli` — 2 testes passando
-  - `@mini-ide/server` — 65 testes passando
+- `pnpm -r test` (valores aproximados, pois podem evoluir com novas HUs)  
+  - `@mini-ide/shared` — 47 testes passando  
+  - `@mini-ide/ui` — **56 testes passando** (incluindo Button/Toast/useToast)  
+  - `@mini-ide/analysis-agent` — 1 teste passando  
+  - `@mini-ide/cli` — 2 testes passando  
+  - `@mini-ide/server` — 65 testes passando  
 
-Este é o **ponto de restauração lógico** da release v1.0.18 com o **Lote 3 do Explore Workspace** implementado e validado.
+Este é o **ponto de restauração lógico** da release v1.0.19 com o **Lote 3 + Lote 4 do Explore Workspace** implementados e validados.
 
 ---
 
 ## 8. Próximos passos sugeridos (UI)
 
-Fora do escopo implementado neste lote, ficam como backlog de UI (já discutidos conceitualmente):
+Fora do escopo implementado nestes lotes, ficam como backlog de UI (já discutidos conceitualmente nas HUs):
 
-- **HU-UI-Export-005 — Exportar Sessão de Exploração**
-  - Exportar notas, timeline e último resultado de `/analyze` em Markdown/JSON.
+- **HU-UI-Explore-Tabs-Minimum-Content-011 – Conteúdos mínimos e estados vazios nas abas**
+  - Preencher cada aba com conteúdo mínimo ou estado vazio explicativo, alinhado ao documento de HUs.
 
-- **HU-UI-Workspace-State-Persistence-006 — Persistência do Workspace**
-  - Persistir aba ativa, conteúdo das Discovery Notes (já parcialmente feito) e último input do Analyze.
+- **HU-UI-Explore-Empty-States-013 – Estados Vazios Informativos e Acionáveis**
+  - Estados vazios mais ricos e guiados em abas ainda sem dados reais.
 
-- **HU-UI-Theme-System-007 — Sistema de Tema Claro/Escuro**
-  - Implementar toggle de tema no header, com persistência em storage.
+- **HU-UI-Explore-Keyboard-Nav-014 – Navegação Completa por Teclado**
+  - Garantir que todo o Explore Workspace seja 100% utilizável por teclado.
+
+- **HU-UI-Explore-Accessibility-015 – Conformidade WCAG 2.1 AA**
+  - Elevar a UI para um patamar de acessibilidade robusto (contraste, foco visível, ARIA, etc.).
+
+- **HU-UI-Explore-Error-Handling-016 – Tratamento Unificado de Erros**
+  - Padronizar mensagens, toasts e estados visuais de erro em toda a UI.
+
+- **HU-UI-Explore-Loading-States-017 – Estados de Carregamento**
+  - Padronizar skeletons, spinners e feedback de carregamento por tela/aba.
+
+- **HU-UI-Explore-Micro-Interactions-018 – Micro-interações e Polimento**
+  - Micro-animações, transições suaves e detalhes de polimento visual.
 
 Qualquer implementação futura deve:
 
-1. Respeitar as regras de governança da UI (layout 3 colunas, wireframe, integração incremental);
-2. Manter a pipeline verde (`42_pipeline_checklist.sh`);
+1. Respeitar as regras de governança da UI (layout 3 colunas, wireframe, integração incremental);  
+2. Manter a pipeline verde (`42_pipeline_checklist.sh`);  
 3. Atualizar este `DEVELOPMENT.md` descrevendo:
-   - HUs impactadas;
-   - Arquivos principais;
-   - Regras de negócio e de UI;
+   - HUs impactadas;  
+   - Arquivos principais;  
+   - Regras de negócio e de UI;  
    - Estratégia de testes e qualidade.
+
