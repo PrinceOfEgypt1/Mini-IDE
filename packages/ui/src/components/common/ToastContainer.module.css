@@ -1,0 +1,16 @@
+/* packages/ui/src/components/common/ToastContainer.module.css */
+
+.container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.container > * {
+  pointer-events: auto;
+}
