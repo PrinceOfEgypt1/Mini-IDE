@@ -28,7 +28,12 @@ describe('App - Layout Wireframe MiniIDE-Explore.html', () => {
   describe('Layout 3 Colunas', () => {
     it('deve renderizar sidebar esquerda com título "Projeto Atual"', () => {
       render(<App />);
-      expect(screen.getByText(/projeto atual/i)).toBeInTheDocument();
+
+      // Há mais de uma ocorrência de "Projeto Atual" (Sidebar + Overview).
+      // O critério de aceite é: existir pelo menos um título "Projeto Atual"
+      // na UI, então aceitamos múltiplos matches.
+      const matches = screen.getAllByText(/projeto atual/i);
+      expect(matches.length).toBeGreaterThanOrEqual(1);
     });
 
     it('deve renderizar painel central com abas do WorkspaceTabs', () => {
